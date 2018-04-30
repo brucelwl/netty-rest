@@ -1,0 +1,70 @@
+package com.lwl.init;
+
+import com.lwl.annotation.RestProcessor;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelPipeline;
+import io.netty.handler.codec.http.HttpContentCompressor;
+import io.netty.handler.codec.http.HttpObjectAggregator;
+import io.netty.handler.codec.http.HttpServerCodec;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslHandler;
+import io.netty.handler.stream.ChunkedWriteHandler;
+
+import javax.net.ssl.SSLEngine;
+
+
+/**
+ * @author bruce - 2018/2/5 13:32
+ */
+public class HttpRestPipelineInit extends ChannelInitializer<Channel> {
+
+    private final boolean clientMode;
+    private SslContext sslContext;
+    private boolean gzipOrDeflate;
+    private final HttpRestHandler httpRestHandler;
+
+    public HttpRestPipelineInit(String scanPackage) {
+        this(scanPackage, false, false, null);
+    }
+
+    public HttpRestPipelineInit(String scanPackage, boolean clientMode, SslContext sslContext) {
+        this(scanPackage, clientMode, false, sslContext);
+    }
+
+    public HttpRestPipelineInit(String scanPackage, boolean clientMode, boolean gzipOrDeflate) {
+        this(scanPackage, clientMode, gzipOrDeflate, null);
+    }
+
+    public HttpRestPipelineInit(String scanPackage, boolean clientMode, boolean gzipOrDeflate, SslContext sslContext) {
+        this.sslContext = sslContext;
+        this.clientMode = clientMode;
+        this.gzipOrDeflate = gzipOrDeflate;
+        RestProcessor processor = new RestProcessor(scanPackage);
+        httpRestHandler = new HttpRestHandler(processor);
+        try {
+            processor.prepare();
+        } catch (IllegalAccessException | InstantiationException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    protected void initChannel(Channel ch) throws Exception {
+        ChannelPipeline pipeline = ch.pipeline();
+        if (sslContext != null) {
+            SSLEngine sslEngine = sslContext.newEngine(ch.alloc());
+            sslEngine.setUseClientMode(clientMode);
+            pipeline.addFirst("ssl", new SslHandler(sslEngine));
+        }
+        //pipeline.addLast("decoder", new HttpRequestDecoder());
+        //pipeline.addLast("encoder", new HttpResponseEncoder());
+        pipeline.addLast("httpServerCodec", new HttpServerCodec());
+        pipeline.addLast("httpAggregator", new HttpObjectAggregator(65535));
+        pipeline.addLast("httpRestHandler", httpRestHandler);
+        //if (gzipOrDeflate) { //数据压缩
+        pipeline.addLast("httpCompressor", new HttpContentCompressor());
+        //}
+        pipeline.addLast("httpChunked", new ChunkedWriteHandler());
+    }
+}
