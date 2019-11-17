@@ -5,6 +5,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http.HttpContentCompressor;
+import io.netty.handler.codec.http.HttpContentDecompressor;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.ssl.SslContext;
@@ -59,12 +60,21 @@ public class HttpRestPipelineInit extends ChannelInitializer<Channel> {
         }
         //pipeline.addLast("decoder", new HttpRequestDecoder());
         //pipeline.addLast("encoder", new HttpResponseEncoder());
+        //等同于以上解码器和编码器
         pipeline.addLast("httpServerCodec", new HttpServerCodec());
         pipeline.addLast("httpAggregator", new HttpObjectAggregator(65535));
-        pipeline.addLast("httpRestHandler", httpRestHandler);
-        //if (gzipOrDeflate) { //数据压缩
-        pipeline.addLast("httpCompressor", new HttpContentCompressor());
-        //}
+
+        //支持请求数据压缩
+        if ("true".equals(System.getProperty("http.request.decompressor"))) {
+            pipeline.addLast("httpDecompressor", new HttpContentDecompressor());
+        }
+        //启数据压缩,必须保证HttpContentCompressor#decode方法在向客户端返回数据之前执行,因此必须放在httpRestHandler之前
+        //当返回的数据超过1024字节时压缩数据
+        pipeline.addLast("httpCompressor", new HttpContentCompressor(6, 15, 8, 1024));
+
         pipeline.addLast("httpChunked", new ChunkedWriteHandler());
+
+        pipeline.addLast("httpRestHandler", httpRestHandler);
+
     }
 }
