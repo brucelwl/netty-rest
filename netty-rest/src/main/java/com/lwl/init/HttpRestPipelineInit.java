@@ -70,9 +70,9 @@ public class HttpRestPipelineInit extends ChannelInitializer<Channel> {
         }
         //启数据压缩,必须保证HttpContentCompressor#decode方法在向客户端返回数据之前执行,因此必须放在httpRestHandler之前
         //当返回的数据超过1024字节时压缩数据
-        pipeline.addLast("httpCompressor", new HttpContentCompressor(6, 15, 8, 1024));
+        //pipeline.addLast("httpCompressor", new HttpContentCompressor(6, 15, 8, 1024));
 
-        pipeline.addLast("httpChunked", new ChunkedWriteHandler());
+        //pipeline.addLast("httpChunked", new ChunkedWriteHandler());
 
         pipeline.addLast("httpRestHandler", httpRestHandler);
 
