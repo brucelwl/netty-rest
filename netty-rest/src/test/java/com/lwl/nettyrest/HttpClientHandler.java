@@ -3,7 +3,6 @@ package com.lwl.nettyrest;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.util.CharsetUtil;
 
 /**
