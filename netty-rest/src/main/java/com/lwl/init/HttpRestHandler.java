@@ -41,6 +41,9 @@ public class HttpRestHandler extends SimpleChannelInboundHandler<FullHttpRequest
             sendError(ctx, HttpResponseStatus.BAD_REQUEST);
             return;
         }
+
+        logger.info("request content:{}", request.content().toString(CharsetUtil.UTF_8));
+
         processor.invoke(ctx, request);
     }
 

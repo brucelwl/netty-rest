@@ -1,6 +1,7 @@
 package com.lwl.nettyrest;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -10,8 +11,12 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.compression.ZlibCodecFactory;
+import io.netty.handler.codec.compression.ZlibEncoder;
+import io.netty.handler.codec.compression.ZlibWrapper;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.HttpClientCodec;
+import io.netty.handler.codec.http.HttpContentCompressor;
 import io.netty.handler.codec.http.HttpContentDecompressor;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
@@ -48,10 +53,18 @@ public class NettyHttpClient {
                     @Override
                     protected void initChannel(SocketChannel ch) throws Exception {
                         ChannelPipeline pipeline = ch.pipeline();
+
                         pipeline.addLast("httpClientCodec", new HttpClientCodec());
-                        pipeline.addLast("httpAggregator", new HttpObjectAggregator(65535));
-                        //支持请求数据压缩
-                        //pipeline.addLast("httpDecompressor", new HttpContentDecompressor());
+
+                        //压缩请求数据
+                        pipeline.addLast("HttpRequestContentCompressor", new HttpRequestContentCompressor(1024));
+
+                        //解压返回数据
+                        pipeline.addLast("httpContentDecompressor", new HttpContentDecompressor());
+
+                        //返回数据聚合
+                        pipeline.addLast("httpAggregator", new HttpObjectAggregator(1024 * 1024));
+
                         pipeline.addLast("HttpClientHandler", new HttpClientHandler());
 
                     }
@@ -67,15 +80,25 @@ public class NettyHttpClient {
             URI pathUrl = new URI(reqUrl.getPath() + "?" + reqUrl.getQuery());
 
             ChannelFuture channelFuture = bootstrap.connect(reqUrl.getHost(), port).sync();
-            DefaultFullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, pathUrl.toASCIIString());
+
+            //测试返回数据gzip压缩
+            StringBuilder stringBuilder = new StringBuilder();
+            for (int i = 0; i < 500; i++) {
+                stringBuilder.append("" + i);
+            }
+
+            ByteBuf content = Unpooled.wrappedBuffer(stringBuilder.toString().getBytes());
+
+            System.out.println("readableBytes:" + content.readableBytes());
+
+            DefaultFullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, pathUrl.toASCIIString(), content);
 
             HttpHeaders headers = req.headers();
-            headers.set(HttpHeaderNames.HOST, reqUrl.getHost() + ":" + reqUrl.getPort())
-                    .set(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE)
-                    //.set(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.GZIP_DEFLATE)
-                    .set(HttpHeaderNames.ACCEPT_LANGUAGE, "zh-CN,zh;q=0.9")
-                    .set(HttpHeaderNames.USER_AGENT, "nett_http_client")
-                    .set(HttpHeaderNames.CONTENT_LENGTH, req.content().readableBytes());
+            headers.set(HttpHeaderNames.HOST, reqUrl.getHost() + ":" + reqUrl.getPort());
+            headers.set(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE);
+            headers.set(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.GZIP_DEFLATE);
+            headers.set(HttpHeaderNames.ACCEPT_LANGUAGE, "zh-CN,zh;q=0.9");
+            headers.set(HttpHeaderNames.USER_AGENT, "nett_http_client");
 
             Channel channel = channelFuture.channel();
 
@@ -102,9 +125,9 @@ public class NettyHttpClient {
 
     public static void main(String[] args) {
 
-        //String url = "http://localhost:8568/index9/say?address=aaa&age=15";
+        String url = "http://localhost:8568/index/say?address=aaa&age=15";
 
-        String url = "https://blog.csdn.net/iceblog/article/details/82814127";
+        //String url = "http://www.imooc.com/course/list";
 
         NettyHttpClient nettyHttpClient = new NettyHttpClient();
 

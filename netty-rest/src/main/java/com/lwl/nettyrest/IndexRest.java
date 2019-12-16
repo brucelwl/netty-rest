@@ -43,6 +43,11 @@ public class IndexRest {
         return "哈哈哈:" + id;
     }
 
+    /**
+     * 方法参数没有使用注解@ReqParam(required = false)表示必传
+     * @param id
+     * @return
+     */
     @ReqMapping(value = "say4", method = ReqMethod.POST)
     public String sayHello4(String id) {
         return id;
