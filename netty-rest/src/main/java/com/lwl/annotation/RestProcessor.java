@@ -26,7 +26,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- *  <pre>
+ * <pre>
  *  获取方法参数名两种解决方案:
  *     1 利用java8的新特性Parameter[] parameters = method.getParameters();可以获取,但是要开启-parameters参数
  *     2 利用Spring的LocalVariableTableParameterNameDiscoverer解析方法参数名,好处是不需要开启Java8特性
@@ -34,17 +34,19 @@ import java.util.concurrent.ConcurrentHashMap;
  *     1 在方法调用的时候,这样的好处是产生的是局部变量内存回收块,占用资源少
  *     2 在初始化所有的类实例,映射url到方法的时候,通过map保存为全局变量,不需要每次都解析,加快运行速度
  * </pre>
+ *
  * @author bruce - 2018/3/11 17:31
  */
 public class RestProcessor {
 
-    private ConcurrentHashMap<String, MethodInfo> urlMethodInfoMap = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<String, UrlMappingMethodInfo> urlMethodInfoMap = new ConcurrentHashMap<>();
 
     private String scanPackage;
 
     public RestProcessor(String scanPackage) {
         this.scanPackage = scanPackage;
     }
+
     /**
      * 扫描控制器注解类,并实例化,解析url和方法映射关系
      *
@@ -62,27 +64,26 @@ public class RestProcessor {
                 //防止映射的url没写分割符,拼接出错误的url
                 String path1 = "/".concat(restAnnotation.value()).concat("/");
                 Method[] declaredMethods = aClass.getDeclaredMethods();
-                if (declaredMethods != null){
+                if (declaredMethods != null) {
                     for (Method method : declaredMethods) {
-                        if (Modifier.isPublic(method.getModifiers())){
-                            ReqMapping mapping = method.getAnnotation(ReqMapping.class);
-                            if(mapping != null){
-                                String url = null;
-                                String[] paths = mapping.value();
-                                MethodInfo methodInfo = new MethodInfo(obj, method);
-                                methodInfo.supportMethod = mapping.method();
-                                methodInfo.parameterNames = discoverer.getParameterNames(methodInfo.method);
-                                if (paths.length == 0){ //如果注解路径参数为空,就以方法名作为url路径
-                                    String name = method.getName();
-                                    url = toReqUrl(path1.concat(name));
+                        ReqMapping mapping = null;
+                        if (Modifier.isPublic(method.getModifiers())
+                                && (mapping = method.getAnnotation(ReqMapping.class)) != null) {
+                            UrlMappingMethodInfo methodInfo = new UrlMappingMethodInfo(obj, method);
+                            methodInfo.supportMethod = mapping.method();
+                            methodInfo.parameterNames = discoverer.getParameterNames(method);
+                            methodInfo.parameterTypes = method.getParameterTypes();
+                            methodInfo.reqParamAnnotations = getReqParamAnnotation(method.getParameterAnnotations());
+                            String[] paths = mapping.value();
+                            //如果注解路径参数为空,就以方法名作为url路径
+                            if (paths.length == 0) {
+                                String url = toReqUrl(path1.concat(method.getName()));
+                                this.saveReqMapping(url, methodInfo);
+                            } else {
+                                for (String path : paths) {
+                                    String url = toReqUrl(path1.concat(path));
                                     this.saveReqMapping(url, methodInfo);
-                                }else{
-                                    for (String path : paths) {
-                                        url = toReqUrl(path1.concat(path));
-                                        this.saveReqMapping(url, methodInfo);
-                                    }
                                 }
-
                             }
                         }
                     }
@@ -91,14 +92,13 @@ public class RestProcessor {
         }
     }
 
-
-    public void invoke(ChannelHandlerContext ctx, FullHttpRequest request){
+    public void invoke(ChannelHandlerContext ctx, FullHttpRequest request) {
         String queryUri = request.uri(); //获取客户端访问的Uri
-        System.out.println("客户端访问的Uri是:"+queryUri);
+        System.out.println("客户端访问的Uri是:" + queryUri);
         //分割掉get请求携带的参数
         String uri = queryUri;
-        if(uri.contains("?")){
-            uri = uri.substring(0,uri.indexOf("?"));
+        if (uri.contains("?")) {
+            uri = uri.substring(0, uri.indexOf("?"));
             System.out.println("去掉get参数url是:" + uri);
         }
         //判断请求的url是否存在,uri没有映射的方法返回404
@@ -107,9 +107,9 @@ public class RestProcessor {
             return;
         }
         HttpMethod method = request.method(); //获取客户端请求方法
-        MethodInfo methodInfo = urlMethodInfoMap.get(uri);//通过url获取映射请求的方法
+        UrlMappingMethodInfo methodInfo = urlMethodInfoMap.get(uri);//通过url获取映射请求的方法
         boolean supportMethod = methodInfo.isSupportMethod(method);
-        if (!supportMethod){ //不支持的请求方法
+        if (!supportMethod) { //不支持的请求方法
             HttpRestHandler.sendError(ctx, HttpResponseStatus.METHOD_NOT_ALLOWED);
             return;
         }
@@ -124,22 +124,22 @@ public class RestProcessor {
         //解析方法参数名
         String[] parameterNames = methodInfo.parameterNames;
         //获取参数类型
-        Class<?>[] parameterTypes = methodInfo.method.getParameterTypes();
+        Class<?>[] parameterTypes = methodInfo.parameterTypes;
         //获取参数对应的注解
-        Annotation[][] parameterAnnotations = methodInfo.method.getParameterAnnotations();
+        ReqParam[] reqParamAnnotations = methodInfo.reqParamAnnotations;
         try {
-            MethodInvokeArgs result = parseMethodInvokeArgs(parameterNames, parameterTypes, parameterAnnotations, queryParams);
-            if (result.status == HttpResponseStatus.BAD_REQUEST){
+            MethodInvokeArgs result = parseMethodInvokeArgs(parameterNames, parameterTypes, reqParamAnnotations, queryParams);
+            if (result.status == HttpResponseStatus.BAD_REQUEST) {
                 HttpRestHandler.sendError(ctx, HttpResponseStatus.BAD_REQUEST);
                 return;
             }
             Object rtn;
             if (parameterTypes.length > 0) {
-                rtn = methodInfo.method.invoke(methodInfo.obj, result.methodInvokeArgs);
+                rtn = methodInfo.objMethod.invoke(methodInfo.obj, result.methodInvokeArgs);
             } else {
-                rtn = methodInfo.method.invoke(methodInfo.obj);
+                rtn = methodInfo.objMethod.invoke(methodInfo.obj);
             }
-            HttpRestHandler.sendResp(ctx,rtn,request);
+            HttpRestHandler.sendResp(ctx, rtn, request);
         } catch (Exception e) {
             e.printStackTrace();
             HttpRestHandler.sendError(ctx, HttpResponseStatus.INTERNAL_SERVER_ERROR);
@@ -148,6 +148,7 @@ public class RestProcessor {
 
     /**
      * 解析get的请求参数
+     *
      * @param queryUri 浏览器输入的url
      */
     private Map<String, List<String>> decodeGetParams(String queryUri) {
@@ -183,13 +184,13 @@ public class RestProcessor {
      * @param url        扫描拼接得到的url
      * @param methodInfo 对应控制器实例的实例方法
      */
-    private void saveReqMapping(String url, MethodInfo methodInfo) {
+    private void saveReqMapping(String url, UrlMappingMethodInfo methodInfo) {
         if (urlMethodInfoMap.containsKey(url)) {
             throw new RuntimeException("存在多个请求映射:".concat(url));
         }
         urlMethodInfoMap.put(url, methodInfo);
         System.out.println(url + " methodInfo:" + methodInfo.hashCode()
-                + " obj:" + methodInfo.obj.hashCode()+" "
+                + " obj:" + methodInfo.obj.hashCode() + " "
                 + JSON.toJSONString(methodInfo.supportMethod));
     }
 
@@ -204,7 +205,7 @@ public class RestProcessor {
         String[] split = url.split("/");
         StringBuilder builder = new StringBuilder();
         for (String s : split) {
-            if (s != null && !s.equals("")){
+            if (s != null && !s.equals("")) {
                 builder.append("/").append(s);
             }
         }
@@ -213,84 +214,100 @@ public class RestProcessor {
 
     /**
      * 将http请求参数转为控制器方法调用参数
+     *
      * @param parameterNames 控制器方法参数名
      * @param parameterTypes 控制器方法参数类型
-     * @param httpParams 请求参数
+     * @param httpParams     请求参数
      * @return
      */
-    private MethodInvokeArgs parseMethodInvokeArgs(String[] parameterNames, Class<?>[] parameterTypes, Annotation[][] parameterAnnotations, Map<String, List<String>> httpParams) {
+    private MethodInvokeArgs parseMethodInvokeArgs(String[] parameterNames, Class<?>[] parameterTypes, ReqParam[] reqParamAnnotations, Map<String, List<String>> httpParams) {
         MethodInvokeArgs result = new MethodInvokeArgs();
         result.status = HttpResponseStatus.CONTINUE;
         Object[] args = null;
-        if (parameterNames != null && parameterNames.length > 0){
+        if (parameterNames != null && parameterNames.length > 0) {
             args = new Object[parameterNames.length];
             for (int i = 0; i < parameterNames.length; i++) {
-                List<String> values = null; //http请求参数对应的值
-                ReqParam paramAnno = getReqParamAnnotation(parameterAnnotations, i);
-                //处理该参数无@ReqParam注解的情况
-                if (paramAnno == null) {
-                    values = httpParams.get(parameterNames[i]);
-                    if (values == null) { //返回客户端错误的请求信息
-                        result.status = HttpResponseStatus.BAD_REQUEST;
-                        return result;
-                    }
-                } else { //处理该参数有@ReqParam注解的情况
-                    // 如果注解的value不为空则使用注解的value作为http请求参数名,否则使用方法参数名
-                    String paramName = !paramAnno.value().trim().equals("") ? paramAnno.value().trim() : parameterNames[i];
-                    values = httpParams.get(paramName);
-                    //如果该参数要求必填,且参数值为null,返回客户端错误的请求信息
-                    if (paramAnno.required() && values == null) {
-                        result.status = HttpResponseStatus.BAD_REQUEST;
-                        return result;
-                    }
+                ReqParam paramAnno = reqParamAnnotations[i];
+                //优先使用注解定义的参数,默认使用方法定义参数
+                String httpParamName = (paramAnno != null && !paramAnno.value().trim().equals(""))
+                        ? paramAnno.value().trim() : parameterNames[i];
+
+                //获取http请求参数对应的值
+                List<String> values = httpParams.get(httpParamName);
+
+                //如果该参数要求必填,且参数值为null,返回客户端错误的请求信息
+                if (values == null && paramAnno != null && paramAnno.required()) {
+                    result.status = HttpResponseStatus.BAD_REQUEST;
+                    return result;
                 }
                 //注意这个时候得到的 http 请求值values可能为null或者size = 0,
                 //size=0表示客户端传递了参数名但没有值
-                Class<?> parameterType = parameterTypes[i];
-                if (String.class == parameterType){
-                    if (values == null) {
-                        args[i] = null;
-                    } else if (values.size() == 0) {
-                        args[i] = "";
-                    }else{
-                        args[i] = values.get(0);
-                    }
-                } else if (int.class == parameterType) {
-                    args[i] = values == null || values.size() == 0 ? 0 : Integer.parseInt(values.get(0));
-                } else if (Integer.class == parameterType) {
-                    args[i] = values == null || values.size() == 0 ? null : Integer.valueOf(values.get(0));
-                } else if (long.class == parameterType) {
-                    args[i] = values == null || values.size() == 0 ? 0 : Long.parseLong(values.get(0));
-                } else if (Long.class == parameterType) {
-                    args[i] = values == null || values.size() == 0 ? null : Long.valueOf(values.get(0));
-                } else if (String[].class == parameterType) {
-                    args[i] = values == null || values.size() == 0 ? null : values.toArray(new String[0]);
-                } else if (List.class == parameterType || ArrayList.class == parameterType) {
-                    args[i] = values;
-                }
-                //这时候可以认为是自定义实体类类型,通过反射解析
-                //TODO 其他数据类型处理
+                args[i] = valueConvenience(parameterTypes[i], values);
             }
         }
         result.methodInvokeArgs = args;
         return result;
     }
 
-    public ReqParam getReqParamAnnotation(Annotation[][] annotations, int index) {
-        ReqParam reqParam = null;
-        Annotation[] annotation = annotations[index];
-        if (annotation != null && annotation.length > 0) {
-            reqParam = (ReqParam) Arrays.stream(annotation)
-                    .filter(anno -> anno.annotationType() == ReqParam.class)
-                    .findFirst().orElse(null);
+    /**
+     * @param parameterType 参数类型
+     * @param values        一个参数可能对应多个值
+     * @return
+     */
+    private Object valueConvenience(Class<?> parameterType, List<String> values) {
+        Object result = null;
+
+        if (String.class == parameterType) {
+            if (values == null) {
+                return null;
+            }
+            if (values.size() == 0) {
+                result = "";
+            } else {
+                result = values.get(0);
+            }
+        } else if (int.class == parameterType) {
+            result = values == null || values.size() == 0 ? 0 : Integer.parseInt(values.get(0));
+
+        } else if (Integer.class == parameterType) {
+            result = values == null || values.size() == 0 ? null : Integer.valueOf(values.get(0));
+
+        } else if (long.class == parameterType) {
+            result = values == null || values.size() == 0 ? 0 : Long.parseLong(values.get(0));
+
+        } else if (Long.class == parameterType) {
+            result = values == null || values.size() == 0 ? null : Long.valueOf(values.get(0));
+
+        } else if (String[].class == parameterType) {
+            result = values == null || values.size() == 0 ? null : values.toArray(new String[0]);
+
+        } else if (List.class == parameterType || ArrayList.class == parameterType) {
+            result = values;
         }
-        return reqParam;
+        //这时候可以认为是自定义实体类类型,通过反射解析
+        //TODO 其他数据类型处理
+        return result;
+    }
+
+    public ReqParam[] getReqParamAnnotation(Annotation[][] paramAnnotations) {
+        ReqParam[] reqParamAnnotations = new ReqParam[paramAnnotations.length];
+        for (int i = 0; i < paramAnnotations.length; i++) {
+            ReqParam reqParam = null;
+            Annotation[] annotation = paramAnnotations[i];
+            if (annotation != null && annotation.length > 0) {
+                reqParam = (ReqParam) Arrays.stream(annotation)
+                        .filter(anno -> anno.annotationType() == ReqParam.class)
+                        .findFirst().orElse(null);
+            }
+            reqParamAnnotations[i] = reqParam;
+        }
+        return reqParamAnnotations;
     }
 
     /**
      * 方法调用参数,如果status为HttpResponseStatus.BAD_REQUEST;提示客户端请求错误信息
      */
-    private class MethodInvokeArgs{
+    private class MethodInvokeArgs {
         private Object[] methodInvokeArgs;
         private HttpResponseStatus status;
     }
@@ -298,21 +315,24 @@ public class RestProcessor {
     /**
      * url映射的方法信息
      */
-    private class MethodInfo {
+    private class UrlMappingMethodInfo {
         /**
-         * @param obj  控制器实例对象
+         * @param obj    控制器实例对象
          * @param method 请求对应的方法
          */
-        private MethodInfo(Object obj, Method method) {
+        private UrlMappingMethodInfo(Object obj, Method method) {
             this.obj = obj;
-            this.method = method;
+            this.objMethod = method;
         }
+
         private Object obj;    //method所在实体类
-        private Method method;
-        /**该方法支持的http请求方式*/
-        private ReqMethod[] supportMethod;
-        /**方法参数名*/
-        private String[] parameterNames;
+        private Method objMethod;
+
+        private ReqMethod[] supportMethod; //该方法支持的http请求方式
+
+        private String[] parameterNames; //方法参数名
+        private Class<?>[] parameterTypes; //方法参数类型
+        private ReqParam[] reqParamAnnotations; //方法参数对应的注解
 
         private boolean isSupportMethod(HttpMethod reqMethod) {
             return supportMethod != null && supportMethod.length > 0

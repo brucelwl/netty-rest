@@ -16,7 +16,9 @@ import java.util.ArrayList;
 public class IndexRest {
 
     @ReqMapping(value = {"say", "hehe"})
-    public UserInfo sayHello(@ReqParam(value = "name1", required = false) ArrayList<String> name, String address, Integer age) {
+    public UserInfo sayHello(@ReqParam(value = "name1", required = false) ArrayList<String> name,
+                             String address,
+                             @ReqParam(required = false) Integer age) {
         UserInfo userInfo = new UserInfo();
         userInfo.setNickname(JSON.toJSONString(name));
         userInfo.setId(1001);
@@ -45,6 +47,7 @@ public class IndexRest {
 
     /**
      * 方法参数没有使用注解@ReqParam(required = false)表示必传
+     *
      * @param id
      * @return
      */
