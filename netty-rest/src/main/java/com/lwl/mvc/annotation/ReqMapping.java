@@ -1,4 +1,6 @@
-package com.lwl.annotation;
+package com.lwl.mvc.annotation;
+
+import com.lwl.mvc.ReqMethod;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -16,6 +18,6 @@ public @interface ReqMapping {
 
     String[] value() default {};
 
-    ReqMethod[] method() default {ReqMethod.GET,ReqMethod.POST};
+    ReqMethod[] method() default {ReqMethod.GET, ReqMethod.POST};
 
 }

@@ -1,13 +1,13 @@
 package com.lwl.nettyrest;
 
 import com.alibaba.fastjson.JSON;
-import com.lwl.annotation.ReqMapping;
-import com.lwl.annotation.ReqMethod;
-import com.lwl.annotation.ReqParam;
-import com.lwl.annotation.Rest;
 import com.lwl.entity.UserInfo;
+import com.lwl.mvc.ReqMethod;
+import com.lwl.mvc.annotation.ReqMapping;
+import com.lwl.mvc.annotation.ReqParam;
+import com.lwl.mvc.annotation.Rest;
 
-import java.util.ArrayList;
+import java.util.List;
 
 /**
  * @author liwenlong - 2018/3/11 13:18
@@ -16,7 +16,8 @@ import java.util.ArrayList;
 public class IndexRest {
 
     @ReqMapping(value = {"say", "hehe"})
-    public UserInfo sayHello(@ReqParam(value = "name1", required = false) ArrayList<String> name, String address, Integer age) {
+    public UserInfo sayHello(@ReqParam(value = "name1", required = true) List<String> name,
+                             String address, Integer age) {
         UserInfo userInfo = new UserInfo();
         userInfo.setNickname(JSON.toJSONString(name));
         userInfo.setId(1001);
@@ -34,8 +35,8 @@ public class IndexRest {
     }
 
     @ReqMapping(value = "say2", method = {ReqMethod.GET})
-    public String sayHello2(@ReqParam(required = false) String address, Integer age) {
-        return address + " age " + age;
+    public UserInfo sayHello2(UserInfo userInfo) {
+        return userInfo;
     }
 
     @ReqMapping(value = "say3")
@@ -45,6 +46,7 @@ public class IndexRest {
 
     /**
      * 方法参数没有使用注解@ReqParam(required = false)表示必传
+     *
      * @param id
      * @return
      */

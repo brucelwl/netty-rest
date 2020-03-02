@@ -1,4 +1,6 @@
-package com.lwl.annotation;
+package com.lwl.mvc.annotation;
+
+import org.springframework.stereotype.Component;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -21,6 +23,7 @@ import java.lang.annotation.Target;
 @Target({ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
+@Component
 public @interface Rest {
 
     String value() default "";

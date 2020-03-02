@@ -1,4 +1,4 @@
-package com.lwl.annotation;
+package com.lwl.mvc.annotation;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;

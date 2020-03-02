@@ -1,6 +1,6 @@
 package com.lwl.init;
 
-import com.lwl.annotation.RestProcessor;
+import com.lwl.mvc.RestProcessor;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
@@ -10,7 +10,7 @@ import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslHandler;
-import io.netty.handler.stream.ChunkedWriteHandler;
+import org.springframework.context.ConfigurableApplicationContext;
 
 import javax.net.ssl.SSLEngine;
 
@@ -25,27 +25,27 @@ public class HttpRestPipelineInit extends ChannelInitializer<Channel> {
     private boolean gzipOrDeflate;
     private final HttpRestHandler httpRestHandler;
 
-    public HttpRestPipelineInit(String scanPackage) {
-        this(scanPackage, false, false, null);
+    public HttpRestPipelineInit(ConfigurableApplicationContext applicationContext) {
+        this(applicationContext, false, false, null);
     }
 
-    public HttpRestPipelineInit(String scanPackage, boolean clientMode, SslContext sslContext) {
-        this(scanPackage, clientMode, false, sslContext);
+    public HttpRestPipelineInit(ConfigurableApplicationContext applicationContext, boolean clientMode, SslContext sslContext) {
+        this(applicationContext, clientMode, false, sslContext);
     }
 
-    public HttpRestPipelineInit(String scanPackage, boolean clientMode, boolean gzipOrDeflate) {
-        this(scanPackage, clientMode, gzipOrDeflate, null);
+    public HttpRestPipelineInit(ConfigurableApplicationContext applicationContext, boolean clientMode, boolean gzipOrDeflate) {
+        this(applicationContext, clientMode, gzipOrDeflate, null);
     }
 
-    public HttpRestPipelineInit(String scanPackage, boolean clientMode, boolean gzipOrDeflate, SslContext sslContext) {
+    public HttpRestPipelineInit(ConfigurableApplicationContext applicationContext, boolean clientMode, boolean gzipOrDeflate, SslContext sslContext) {
         this.sslContext = sslContext;
         this.clientMode = clientMode;
         this.gzipOrDeflate = gzipOrDeflate;
-        RestProcessor processor = new RestProcessor(scanPackage);
+        RestProcessor processor = new RestProcessor(applicationContext);
         httpRestHandler = new HttpRestHandler(processor);
         try {
             processor.prepare();
-        } catch (IllegalAccessException | InstantiationException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }

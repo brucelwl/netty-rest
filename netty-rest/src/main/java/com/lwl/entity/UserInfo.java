@@ -10,6 +10,7 @@ public class UserInfo implements Serializable {
 	private String loginname;
 	private String pwd;
 	private String nickname;
+	private Address address;
 
 	public int getId() {
 		return id;
@@ -43,6 +44,14 @@ public class UserInfo implements Serializable {
 		this.nickname = nickname;
 	}
 
+	public Address getAddress() {
+		return address;
+	}
+
+	public void setAddress(Address address) {
+		this.address = address;
+	}
+
 	@Override
 	public String toString() {
 		return "UserInfo{" +
@@ -50,6 +59,7 @@ public class UserInfo implements Serializable {
 				", loginname='" + loginname + '\'' +
 				", pwd='" + pwd + '\'' +
 				", nickname='" + nickname + '\'' +
+				", address=" + address +
 				'}';
 	}
 }
