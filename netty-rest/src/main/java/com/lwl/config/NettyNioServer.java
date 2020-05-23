@@ -43,7 +43,7 @@ public class NettyNioServer {
     }
 
     public void startServer(int port) {
-        NioEventLoopGroup acceptGroup = new NioEventLoopGroup();
+        NioEventLoopGroup acceptGroup = new NioEventLoopGroup(1);
         NioEventLoopGroup handlerGroup = new NioEventLoopGroup();
         nioEventLoopGroups.add(acceptGroup);
         nioEventLoopGroups.add(handlerGroup);
