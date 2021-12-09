@@ -4,18 +4,17 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.lwl</groupId>
-    <artifactId>netty-rest</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <artifactId>netty-http-rest</artifactId>
+    <version>0.0.1</version>
     <packaging>jar</packaging>
 
-    <name>netty-rest</name>
-    <description>netty-rest</description>
+    <name>netty-http-rest</name>
+    <description>netty-http-rest</description>
 
     <parent>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-parent</artifactId>
-        <version>2.2.4.RELEASE</version>
-        <relativePath/> <!-- lookup parent from repository -->
+        <groupId>com.lwl</groupId>
+        <artifactId>netty-rest</artifactId>
+        <version>0.0.1</version>
     </parent>
 
     <properties>
@@ -57,6 +56,5 @@
             </plugin>
         </plugins>
     </build>
-
 
 </project>

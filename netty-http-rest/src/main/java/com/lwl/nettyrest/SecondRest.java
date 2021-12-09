@@ -3,6 +3,7 @@ package com.lwl.nettyrest;
 
 import com.lwl.mvc.annotation.ReqMapping;
 import com.lwl.mvc.ReqMethod;
+import com.lwl.mvc.annotation.ReqParam;
 import com.lwl.mvc.annotation.Rest;
 
 /**
@@ -23,7 +24,7 @@ public class SecondRest {
     }
 
     @ReqMapping(value = "say3",method = {ReqMethod.GET})
-    protected void sayHello3(String name){
+    protected void sayHello3(@ReqParam String name){
 
     }
 

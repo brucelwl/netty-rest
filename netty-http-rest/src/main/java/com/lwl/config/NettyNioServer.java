@@ -1,5 +1,6 @@
 package com.lwl.config;
 
+import com.lwl.mvc.RestProcessor;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -10,11 +11,14 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.util.concurrent.Future;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
 
-/** * Asynchronous networking with Netty
+/**
+ * Asynchronous networking with Netty
  * <pre>
  *  TCP消息粘包/拆包问题,解决策略:
  *  1/消息定长,例如每个报文的大小固定长度200字节,如果不够,空格不齐
@@ -34,9 +38,11 @@ import java.util.List;
  * @author bruce - 2018/4/30 19:17
  */
 public class NettyNioServer {
+    private static final Logger logger = LoggerFactory.getLogger(NettyNioServer.class);
+
     private static List<NioEventLoopGroup> nioEventLoopGroups = new ArrayList<>(2);
 
-    private final ChannelHandler handlers ;
+    private final ChannelHandler handlers;
 
     public NettyNioServer(ChannelHandler hannelInitializer) {
         this.handlers = hannelInitializer;
@@ -58,28 +64,27 @@ public class NettyNioServer {
 
         ServerBootstrap bootstrap = new ServerBootstrap();
 
-        bootstrap.group(acceptGroup,handlerGroup)
+        bootstrap.group(acceptGroup, handlerGroup)
                 .channel(NioServerSocketChannel.class)
                 .option(ChannelOption.SO_BACKLOG, 200) //指定了内核为此套接口排队的最大连接数
-                .option(ChannelOption.SO_RCVBUF,256)  //接收缓冲区
-                .option(ChannelOption.SO_SNDBUF,1024) //发送缓冲区
-                .option(ChannelOption.SO_TIMEOUT, 15_000)
-                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS,30_000) //设置连接超时时间
+                .option(ChannelOption.SO_RCVBUF, 256)  //接收缓冲区
+                //.option(ChannelOption.SO_SNDBUF,1024)
+                //.option(ChannelOption.SO_TIMEOUT, 15_000)
+                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 30_000) //设置连接超时时间
                 //.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT) //使用对象池重用缓冲区
+                .childOption(ChannelOption.SO_SNDBUF, 1024) //发送缓冲区
+                .childOption(ChannelOption.SO_TIMEOUT, 15_000)
                 .localAddress(port)
                 .handler(new LoggingHandler(LogLevel.INFO))
                 .childHandler(handlers);
 
         ChannelFuture future = bootstrap.bind();
-        future.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
-                if(future.isSuccess()){
-                    System.out.println("Server bound success on port: "+port);
-                }else{
-                    System.err.println("Bound attempt failed");
-                    future.cause().printStackTrace();
-                }
+        future.addListener((ChannelFutureListener) future1 -> {
+            if (future1.isSuccess()) {
+                logger.info("Server bound success on port: {}", port);
+            } else {
+                logger.error("Bound attempt failed:", future1.cause());
+                future1.cause().printStackTrace();
             }
         });
 

@@ -1,6 +1,5 @@
 package com.lwl.mvc;
 
-import com.alibaba.fastjson.JSON;
 import com.lwl.init.HttpRestHandler;
 import com.lwl.mvc.annotation.ReqMapping;
 import com.lwl.mvc.annotation.ReqParam;
@@ -14,6 +13,8 @@ import io.netty.handler.codec.http.multipart.DefaultHttpDataFactory;
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder;
 import io.netty.handler.codec.http.multipart.InterfaceHttpData;
 import io.netty.handler.codec.http.multipart.MemoryAttribute;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.aop.support.AopUtils;
 import org.springframework.boot.context.properties.bind.Bindable;
 import org.springframework.boot.context.properties.bind.Binder;
@@ -43,6 +44,8 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class RestProcessor {
 
+    private static final Logger logger = LoggerFactory.getLogger(RestProcessor.class);
+
     private ConcurrentHashMap<String, UrlMappingMethodInfo> urlMethodInfoMap = new ConcurrentHashMap<>();
 
     private ConfigurableApplicationContext applicationContext;
@@ -63,33 +66,35 @@ public class RestProcessor {
         for (Object restBean : restBeans) {
             Class<?> restBeanClass = AopUtils.getTargetClass(restBean);
             Method[] declaredMethods = restBeanClass.getDeclaredMethods();
-            if (declaredMethods.length > 0) {
-                Rest restAnnotation = restBeanClass.getAnnotation(Rest.class);
-                //防止映射的url没写分割符,拼接出错误的url
-                String parentPath = "/".concat(restAnnotation.value()).concat("/");
-                for (Method method : declaredMethods) {
-                    ReqMapping mapping = null;
-                    if (Modifier.isPublic(method.getModifiers())
-                            && (mapping = method.getAnnotation(ReqMapping.class)) != null) {
-                        UrlMappingMethodInfo methodInfo = new UrlMappingMethodInfo(restBean, method);
-                        methodInfo.supportMethod = mapping.method();
-                        methodInfo.parameterNames = discoverer.getParameterNames(method);
-                        methodInfo.genericParamTypes = method.getGenericParameterTypes();
-                        methodInfo.reqParamAnnotations = getReqParamAnnotation(method.getParameters());
-                        String[] paths = mapping.value();
-                        if (paths.length == 0) {
-                            //如果注解路径参数为空,就以方法名作为url路径
-                            String url = toReqUrl(parentPath.concat(method.getName()));
-                            this.saveReqMapping(url, methodInfo);
-                        } else {
-                            for (String path : paths) {
-                                String url = toReqUrl(parentPath.concat(path));
-                                this.saveReqMapping(url, methodInfo);
-                            }
-                        }
+            if (!(declaredMethods.length > 0)) {
+                continue;
+            }
+            Rest restAnnotation = restBeanClass.getAnnotation(Rest.class);
+            //防止映射的url没写分割符,拼接出错误的url
+            String parentPath = "/".concat(restAnnotation.value()).concat("/");
+            for (Method method : declaredMethods) {
+                ReqMapping mapping = null;
+                if (!Modifier.isPublic(method.getModifiers()) || (mapping = method.getAnnotation(ReqMapping.class)) == null) {
+                    continue;
+                }
+                UrlMappingMethodInfo methodInfo = new UrlMappingMethodInfo(restBean, method);
+                methodInfo.supportMethod = mapping.method();
+                methodInfo.parameterNames = discoverer.getParameterNames(method);
+                methodInfo.genericParamTypes = method.getGenericParameterTypes();
+                methodInfo.reqParamAnnotations = getReqParamAnnotation(method.getParameters());
+                String[] paths = mapping.value();
+                if (paths.length == 0) {
+                    //如果注解路径参数为空,就以方法名作为url路径
+                    String url = toReqUrl(parentPath.concat(method.getName()));
+                    this.saveReqMapping(url, methodInfo);
+                } else {
+                    for (String path : paths) {
+                        String url = toReqUrl(parentPath.concat(path));
+                        this.saveReqMapping(url, methodInfo);
                     }
                 }
             }
+
         }
     }
 
@@ -191,9 +196,12 @@ public class RestProcessor {
             throw new RuntimeException("存在多个请求映射:".concat(url));
         }
         urlMethodInfoMap.put(url, methodInfo);
-        System.out.println(url + " methodInfo:" + methodInfo.hashCode()
-                + " obj:" + methodInfo.obj.hashCode() + " "
-                + JSON.toJSONString(methodInfo.supportMethod));
+        logger.info("url:{} {} obj:{} methodInfo:{}", url, methodInfo.supportMethod, objId(methodInfo.obj), methodInfo);
+    }
+
+    private String objId(Object obj) {
+        String s = obj.toString();
+        return s.substring(s.lastIndexOf(".") + 1);
     }
 
     /**
@@ -346,6 +354,18 @@ public class RestProcessor {
         private boolean isSupportMethod(HttpMethod reqMethod) {
             return supportMethod != null && supportMethod.length > 0
                     && Arrays.stream(supportMethod).anyMatch(support -> support.name().equalsIgnoreCase(reqMethod.name()));
+        }
+
+        @Override
+        public String toString() {
+            return "UrlMappingMethodInfo{" +
+                    "obj=" + obj +
+                    ", objMethod=" + objMethod +
+                    ", supportMethod=" + Arrays.toString(supportMethod) +
+                    ", parameterNames=" + Arrays.toString(parameterNames) +
+                    ", genericParamTypes=" + Arrays.toString(genericParamTypes) +
+                    ", reqParamAnnotations=" + Arrays.toString(reqParamAnnotations) +
+                    '}';
         }
     }
 
