@@ -2,7 +2,7 @@ package com.lwl.nettyrest;
 
 import com.alibaba.fastjson.JSON;
 import com.lwl.entity.UserInfo;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
