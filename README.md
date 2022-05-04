@@ -1,8 +1,8 @@
 # netty-rest
 
 #### 项目介绍
-基于netty实现防spring mvc 的@RestController功能http请求
-无需外部servlet容器,基于Spring+netty实现rest风格的http请求并实现Spring的@RestController功能。
+基于netty实现Http服务器,无需外部servlet容器(例如tomcat),使用方式类似于spring mvc 的@RestController
+
 netty自身提供了对http的支持,通过FullHttpRequest对象可以获取请求的url,和http请求方式,但是并没有处理url应该怎么处理请求.所以基本思路是:
 
 1. 自定义注解:@Rest,@ReqMapping,@ReqParam , @Rest用于标记某个类是控制器,@ReqMapping用于标记方法哪个url对应该方法,@ReqParam用于标记方法参数,对应于哪个http请求参数
