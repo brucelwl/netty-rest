@@ -4,12 +4,12 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.lwl</groupId>
-    <artifactId>netty-http-rest</artifactId>
+    <artifactId>netty-http-rest-server-boot-starter</artifactId>
     <version>0.0.1</version>
     <packaging>jar</packaging>
 
-    <name>netty-http-rest</name>
-    <description>netty-http-rest</description>
+    <name>netty-http-rest-server-boot-starter</name>
+    <description>netty-http-rest-server-boot-starter</description>
 
     <parent>
         <groupId>com.lwl</groupId>
@@ -30,15 +30,13 @@
         </dependency>
 
         <dependency>
-            <groupId>io.netty</groupId>
-            <artifactId>netty-all</artifactId>
-            <version>4.1.43.Final</version>
+            <groupId>com.lwl</groupId>
+            <artifactId>netty-http-rest-server</artifactId>
         </dependency>
 
         <dependency>
             <groupId>com.alibaba</groupId>
             <artifactId>fastjson</artifactId>
-            <version>1.2.62</version>
         </dependency>
 
         <dependency>

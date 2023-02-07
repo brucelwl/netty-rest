@@ -10,7 +10,6 @@ import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslHandler;
-import org.springframework.context.ConfigurableApplicationContext;
 
 import javax.net.ssl.SSLEngine;
 
@@ -25,23 +24,23 @@ public class HttpRestPipelineInit extends ChannelInitializer<Channel> {
     private boolean gzipOrDeflate;
     private final HttpRestHandler httpRestHandler;
 
-    public HttpRestPipelineInit(ConfigurableApplicationContext applicationContext) {
-        this(applicationContext, false, false, null);
+    public HttpRestPipelineInit(RestBeanScanStrategy scanStrategy) {
+        this(scanStrategy, false, false, null);
     }
 
-    public HttpRestPipelineInit(ConfigurableApplicationContext applicationContext, boolean clientMode, SslContext sslContext) {
-        this(applicationContext, clientMode, false, sslContext);
+    public HttpRestPipelineInit(RestBeanScanStrategy scanStrategy, boolean clientMode, SslContext sslContext) {
+        this(scanStrategy, clientMode, false, sslContext);
     }
 
-    public HttpRestPipelineInit(ConfigurableApplicationContext applicationContext, boolean clientMode, boolean gzipOrDeflate) {
-        this(applicationContext, clientMode, gzipOrDeflate, null);
+    public HttpRestPipelineInit(RestBeanScanStrategy scanStrategy, boolean clientMode, boolean gzipOrDeflate) {
+        this(scanStrategy, clientMode, gzipOrDeflate, null);
     }
 
-    public HttpRestPipelineInit(ConfigurableApplicationContext applicationContext, boolean clientMode, boolean gzipOrDeflate, SslContext sslContext) {
+    public HttpRestPipelineInit(RestBeanScanStrategy scanStrategy, boolean clientMode, boolean gzipOrDeflate, SslContext sslContext) {
         this.sslContext = sslContext;
         this.clientMode = clientMode;
         this.gzipOrDeflate = gzipOrDeflate;
-        RestProcessor processor = new RestProcessor(applicationContext);
+        RestProcessor processor = new RestProcessor(scanStrategy);
         httpRestHandler = new HttpRestHandler(processor);
         try {
             processor.prepare();

@@ -1,7 +1,9 @@
 package com.lwl.config;
 
+import com.lwl.NettyHttpRestServer;
 import com.lwl.entity.UserInfo;
 import com.lwl.init.HttpRestPipelineInit;
+import com.lwl.init.SpringRestBeanScanStrategy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
@@ -40,7 +42,9 @@ public class NettyConfig implements ApplicationContextAware, SmartInitializingSi
     //基于netty实现rest风格的http请求,仿造Spring依赖注入
     @Override
     public void afterSingletonsInstantiated() {
-        NettyNioServer nettyNio = new NettyNioServer(new HttpRestPipelineInit(applicationContext));
+        SpringRestBeanScanStrategy springRestBeanScanStrategy = new SpringRestBeanScanStrategy(applicationContext);
+        HttpRestPipelineInit httpRestPipelineInit = new HttpRestPipelineInit(springRestBeanScanStrategy);
+        NettyHttpRestServer nettyNio = new NettyHttpRestServer(httpRestPipelineInit);
         nettyNio.startServer(nettyPort);
 
         logger.info("netty http server start on port {}", nettyPort);

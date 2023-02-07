@@ -1,6 +1,7 @@
 package com.lwl.mvc;
 
 import com.lwl.init.HttpRestHandler;
+import com.lwl.init.RestBeanScanStrategy;
 import com.lwl.mvc.annotation.ReqMapping;
 import com.lwl.mvc.annotation.ReqParam;
 import com.lwl.mvc.annotation.Rest;
@@ -15,19 +16,22 @@ import io.netty.handler.codec.http.multipart.InterfaceHttpData;
 import io.netty.handler.codec.http.multipart.MemoryAttribute;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.aop.support.AopUtils;
-import org.springframework.boot.context.properties.bind.Bindable;
-import org.springframework.boot.context.properties.bind.Binder;
-import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.core.LocalVariableTableParameterNameDiscoverer;
-import org.springframework.core.ResolvableType;
 import org.springframework.core.convert.support.DefaultConversionService;
-import org.springframework.core.env.AbstractEnvironment;
-import org.springframework.core.env.MapPropertySource;
 import org.springframework.util.ReflectionUtils;
 
-import java.lang.reflect.*;
-import java.util.*;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.lang.reflect.Parameter;
+import java.lang.reflect.Type;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -48,10 +52,10 @@ public class RestProcessor {
 
     private ConcurrentHashMap<String, UrlMappingMethodInfo> urlMethodInfoMap = new ConcurrentHashMap<>();
 
-    private ConfigurableApplicationContext applicationContext;
+    private RestBeanScanStrategy scanStrategy;
 
-    public RestProcessor(ConfigurableApplicationContext applicationContext) {
-        this.applicationContext = applicationContext;
+    public RestProcessor(RestBeanScanStrategy scanStrategy) {
+        this.scanStrategy = scanStrategy;
     }
 
     /**
@@ -60,11 +64,12 @@ public class RestProcessor {
     public void prepare() {
         LocalVariableTableParameterNameDiscoverer discoverer = new LocalVariableTableParameterNameDiscoverer();
 
-        Map<String, Object> restBeanMap = applicationContext.getBeansWithAnnotation(Rest.class);
+        Map<String, Object> restBeanMap = scanStrategy.getBeansWithAnnotation(Rest.class);
         Collection<Object> restBeans = restBeanMap.values();
 
         for (Object restBean : restBeans) {
-            Class<?> restBeanClass = AopUtils.getTargetClass(restBean);
+            //Class<?> restBeanClass = AopUtils.getTargetClass(restBean);
+            Class<?> restBeanClass = restBean.getClass();
             Method[] declaredMethods = restBeanClass.getDeclaredMethods();
             if (!(declaredMethods.length > 0)) {
                 continue;
@@ -290,26 +295,27 @@ public class RestProcessor {
                     ? null
                     : DefaultConversionService.getSharedInstance().convert(values, (Class<?>) parameterType);
         }
-        AbstractEnvironment environment = new AbstractEnvironment() {
-        };
-        MapPropertySource mapPropertySource = new MapPropertySource("http-req-params", new HashMap<>(httpParams));
-        environment.getPropertySources().addLast(mapPropertySource);
-        Binder binder = Binder.get(environment);
-
-        if (parameterType instanceof ParameterizedType) {
-            ParameterizedType parameterizedType = (ParameterizedType) parameterType;
-            Type rawType = parameterizedType.getRawType();
-            if (List.class.isAssignableFrom((Class<?>) rawType)) {
-                Bindable<? extends List<?>> listBindable = Bindable.listOf((Class<?>) parameterizedType.getActualTypeArguments()[0]);
-                return binder.bind(httpParamName, listBindable).orElse(null);
-            }
-            if (Set.class.isAssignableFrom((Class<?>) rawType)) {
-                Bindable<? extends Set<?>> setBindable = Bindable.setOf((Class<?>) parameterizedType.getActualTypeArguments()[0]);
-                return binder.bind(httpParamName, setBindable).orElse(null);
-            }
-        }
-        ResolvableType resolvableType = ResolvableType.forType(parameterType);
-        return binder.bind("", Bindable.of(resolvableType)).orElse(null);
+        //AbstractEnvironment environment = new AbstractEnvironment() {
+        //};
+        //MapPropertySource mapPropertySource = new MapPropertySource("http-req-params", new HashMap<>(httpParams));
+        //environment.getPropertySources().addLast(mapPropertySource);
+        //Binder binder = Binder.get(environment);
+        //
+        //if (parameterType instanceof ParameterizedType) {
+        //    ParameterizedType parameterizedType = (ParameterizedType) parameterType;
+        //    Type rawType = parameterizedType.getRawType();
+        //    if (List.class.isAssignableFrom((Class<?>) rawType)) {
+        //        Bindable<? extends List<?>> listBindable = Bindable.listOf((Class<?>) parameterizedType.getActualTypeArguments()[0]);
+        //        return binder.bind(httpParamName, listBindable).orElse(null);
+        //    }
+        //    if (Set.class.isAssignableFrom((Class<?>) rawType)) {
+        //        Bindable<? extends Set<?>> setBindable = Bindable.setOf((Class<?>) parameterizedType.getActualTypeArguments()[0]);
+        //        return binder.bind(httpParamName, setBindable).orElse(null);
+        //    }
+        //}
+        //ResolvableType resolvableType = ResolvableType.forType(parameterType);
+        //return binder.bind("", Bindable.of(resolvableType)).orElse(null);
+        throw new IllegalArgumentException("不支持,需要手动写一个属性到对象的映射工具");
     }
 
     public ReqParam[] getReqParamAnnotation(Parameter[] parameters) {

@@ -1,6 +1,6 @@
-package com.lwl.config;
+package com.lwl;
 
-import com.lwl.mvc.RestProcessor;
+import com.lwl.init.HttpRestPipelineInit;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -37,14 +37,14 @@ import java.util.List;
  *
  * @author bruce - 2018/4/30 19:17
  */
-public class NettyNioServer {
-    private static final Logger logger = LoggerFactory.getLogger(NettyNioServer.class);
+public class NettyHttpRestServer {
+    private static final Logger logger = LoggerFactory.getLogger(NettyHttpRestServer.class);
 
     private static List<NioEventLoopGroup> nioEventLoopGroups = new ArrayList<>(2);
 
     private final ChannelHandler handlers;
 
-    public NettyNioServer(ChannelHandler hannelInitializer) {
+    public NettyHttpRestServer(HttpRestPipelineInit hannelInitializer) {
         this.handlers = hannelInitializer;
     }
 

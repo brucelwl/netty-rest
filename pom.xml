@@ -25,7 +25,8 @@
     </properties>
 
     <modules>
-        <module>netty-http-rest</module>
+        <module>netty-http-rest-server</module>
+        <module>netty-http-rest-server-boot-starter</module>
     </modules>
 
     <dependencyManagement>
@@ -42,6 +43,12 @@
                 <groupId>com.alibaba</groupId>
                 <artifactId>fastjson</artifactId>
                 <version>1.2.62</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.lwl</groupId>
+                <artifactId>netty-http-rest-server</artifactId>
+                <version>0.0.1</version>
             </dependency>
 
         </dependencies>
