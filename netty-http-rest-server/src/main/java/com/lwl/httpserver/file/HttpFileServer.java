@@ -1,4 +1,4 @@
-package com.lwl.file;
+package com.lwl.httpserver.file;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;

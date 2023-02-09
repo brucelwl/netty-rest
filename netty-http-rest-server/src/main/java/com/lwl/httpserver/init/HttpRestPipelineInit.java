@@ -1,6 +1,7 @@
-package com.lwl.init;
+package com.lwl.httpserver.init;
 
-import com.lwl.mvc.RestProcessor;
+import com.lwl.httpserver.mvc.RestAnnotationScanner;
+import com.lwl.httpserver.mvc.RestProcessor;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
@@ -24,19 +25,19 @@ public class HttpRestPipelineInit extends ChannelInitializer<Channel> {
     private boolean gzipOrDeflate;
     private final HttpRestHandler httpRestHandler;
 
-    public HttpRestPipelineInit(RestBeanScanStrategy scanStrategy) {
+    public HttpRestPipelineInit(RestAnnotationScanner scanStrategy) {
         this(scanStrategy, false, false, null);
     }
 
-    public HttpRestPipelineInit(RestBeanScanStrategy scanStrategy, boolean clientMode, SslContext sslContext) {
+    public HttpRestPipelineInit(RestAnnotationScanner scanStrategy, boolean clientMode, SslContext sslContext) {
         this(scanStrategy, clientMode, false, sslContext);
     }
 
-    public HttpRestPipelineInit(RestBeanScanStrategy scanStrategy, boolean clientMode, boolean gzipOrDeflate) {
+    public HttpRestPipelineInit(RestAnnotationScanner scanStrategy, boolean clientMode, boolean gzipOrDeflate) {
         this(scanStrategy, clientMode, gzipOrDeflate, null);
     }
 
-    public HttpRestPipelineInit(RestBeanScanStrategy scanStrategy, boolean clientMode, boolean gzipOrDeflate, SslContext sslContext) {
+    public HttpRestPipelineInit(RestAnnotationScanner scanStrategy, boolean clientMode, boolean gzipOrDeflate, SslContext sslContext) {
         this.sslContext = sslContext;
         this.clientMode = clientMode;
         this.gzipOrDeflate = gzipOrDeflate;

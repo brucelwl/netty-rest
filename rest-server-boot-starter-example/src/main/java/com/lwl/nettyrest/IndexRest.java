@@ -2,10 +2,10 @@ package com.lwl.nettyrest;
 
 import com.alibaba.fastjson.JSON;
 import com.lwl.entity.UserInfo;
-import com.lwl.mvc.ReqMethod;
-import com.lwl.mvc.annotation.ReqMapping;
-import com.lwl.mvc.annotation.ReqParam;
-import com.lwl.mvc.annotation.Rest;
+import com.lwl.httpserver.mvc.ReqMethod;
+import com.lwl.httpserver.mvc.annotation.ReqMapping;
+import com.lwl.httpserver.mvc.annotation.ReqParam;
+import com.lwl.httpserver.mvc.annotation.Rest;
 
 import java.util.List;
 

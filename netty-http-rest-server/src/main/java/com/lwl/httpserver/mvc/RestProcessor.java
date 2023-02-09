@@ -1,10 +1,9 @@
-package com.lwl.mvc;
+package com.lwl.httpserver.mvc;
 
-import com.lwl.init.HttpRestHandler;
-import com.lwl.init.RestBeanScanStrategy;
-import com.lwl.mvc.annotation.ReqMapping;
-import com.lwl.mvc.annotation.ReqParam;
-import com.lwl.mvc.annotation.Rest;
+import com.lwl.httpserver.init.HttpRestHandler;
+import com.lwl.httpserver.mvc.annotation.ReqMapping;
+import com.lwl.httpserver.mvc.annotation.ReqParam;
+import com.lwl.httpserver.mvc.annotation.Rest;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpMethod;
@@ -52,10 +51,10 @@ public class RestProcessor {
 
     private ConcurrentHashMap<String, UrlMappingMethodInfo> urlMethodInfoMap = new ConcurrentHashMap<>();
 
-    private RestBeanScanStrategy scanStrategy;
+    private RestAnnotationScanner scanner;
 
-    public RestProcessor(RestBeanScanStrategy scanStrategy) {
-        this.scanStrategy = scanStrategy;
+    public RestProcessor(RestAnnotationScanner scanner) {
+        this.scanner = scanner;
     }
 
     /**
@@ -64,7 +63,7 @@ public class RestProcessor {
     public void prepare() {
         LocalVariableTableParameterNameDiscoverer discoverer = new LocalVariableTableParameterNameDiscoverer();
 
-        Map<String, Object> restBeanMap = scanStrategy.getBeansWithAnnotation(Rest.class);
+        Map<String, Object> restBeanMap = scanner.getBeansWithAnnotation(Rest.class);
         Collection<Object> restBeans = restBeanMap.values();
 
         for (Object restBean : restBeans) {
@@ -330,7 +329,7 @@ public class RestProcessor {
     /**
      * 方法调用参数,如果status为HttpResponseStatus.BAD_REQUEST;提示客户端请求错误信息
      */
-    private class MethodInvokeArgs {
+    private static class MethodInvokeArgs {
         private Object[] methodInvokeArgs;
         private HttpResponseStatus status;
     }
@@ -338,7 +337,7 @@ public class RestProcessor {
     /**
      * url映射的方法信息
      */
-    private class UrlMappingMethodInfo {
+    private static class UrlMappingMethodInfo {
         /**
          * @param obj    控制器实例对象
          * @param method 请求对应的方法

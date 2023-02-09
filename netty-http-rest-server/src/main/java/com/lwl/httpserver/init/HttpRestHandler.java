@@ -1,7 +1,7 @@
-package com.lwl.init;
+package com.lwl.httpserver.init;
 
 import com.alibaba.fastjson.JSON;
-import com.lwl.mvc.RestProcessor;
+import com.lwl.httpserver.mvc.RestProcessor;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;

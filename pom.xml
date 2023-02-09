@@ -3,7 +3,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.lwl</groupId>
+    <groupId>com.lwl.httpserver</groupId>
     <artifactId>netty-rest</artifactId>
     <version>0.0.1</version>
     <packaging>pom</packaging>
@@ -27,6 +27,7 @@
     <modules>
         <module>netty-http-rest-server</module>
         <module>netty-http-rest-server-boot-starter</module>
+        <module>rest-server-boot-starter-example</module>
     </modules>
 
     <dependencyManagement>
@@ -46,8 +47,14 @@
             </dependency>
 
             <dependency>
-                <groupId>com.lwl</groupId>
+                <groupId>com.lwl.httpserver</groupId>
                 <artifactId>netty-http-rest-server</artifactId>
+                <version>0.0.1</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.lwl.httpserver</groupId>
+                <artifactId>netty-http-rest-server-boot-starter</artifactId>
                 <version>0.0.1</version>
             </dependency>
 

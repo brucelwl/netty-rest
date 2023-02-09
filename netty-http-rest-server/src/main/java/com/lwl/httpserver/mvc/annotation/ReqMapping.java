@@ -1,6 +1,6 @@
-package com.lwl.mvc.annotation;
+package com.lwl.httpserver.mvc.annotation;
 
-import com.lwl.mvc.ReqMethod;
+import com.lwl.httpserver.mvc.ReqMethod;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;

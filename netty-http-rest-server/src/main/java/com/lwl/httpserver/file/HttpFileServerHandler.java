@@ -1,6 +1,6 @@
-package com.lwl.file;
+package com.lwl.httpserver.file;
 
-import com.lwl.init.HttpRestHandler;
+import com.lwl.httpserver.init.HttpRestHandler;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;

@@ -1,6 +1,7 @@
-package com.lwl.init;
+package com.lwl.httpserver.mvc;
 
-import com.lwl.mvc.annotation.Rest;
+import com.lwl.httpserver.mvc.RestAnnotationScanner;
+import com.lwl.httpserver.mvc.annotation.Rest;
 import org.springframework.context.ConfigurableApplicationContext;
 
 import java.util.Map;
@@ -8,11 +9,11 @@ import java.util.Map;
 /**
  * Created by bruce on 2023/2/8 02:32
  */
-public class SpringRestBeanScanStrategy implements RestBeanScanStrategy {
+public class SpringRestAnnotationScanner implements RestAnnotationScanner {
 
     private ConfigurableApplicationContext applicationContext;
 
-    public SpringRestBeanScanStrategy(ConfigurableApplicationContext applicationContext) {
+    public SpringRestAnnotationScanner(ConfigurableApplicationContext applicationContext) {
         this.applicationContext = applicationContext;
     }
 

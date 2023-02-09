@@ -1,30 +1,25 @@
-package com.lwl.config;
+package com.lwl.httpserver.boot.autoconfigure;
 
-import com.lwl.NettyHttpRestServer;
-import com.lwl.entity.UserInfo;
-import com.lwl.init.HttpRestPipelineInit;
-import com.lwl.init.SpringRestBeanScanStrategy;
+import com.lwl.httpserver.NettyHttpRestServer;
+import com.lwl.httpserver.init.HttpRestPipelineInit;
+import com.lwl.httpserver.mvc.SpringRestAnnotationScanner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.SmartInitializingSingleton;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.context.properties.bind.BindResult;
-import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.ConfigurableApplicationContext;
-import org.springframework.core.env.Environment;
-import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Configuration;
 
 
 /**
  * @author bruce - 2018/4/30 19:16
  */
-@Component
-public class NettyConfig implements ApplicationContextAware, SmartInitializingSingleton {
-    private static final Logger logger = LoggerFactory.getLogger(NettyConfig.class);
+@Configuration
+public class HttpRestServerAutoConfiguration implements ApplicationContextAware, SmartInitializingSingleton {
+    private static final Logger logger = LoggerFactory.getLogger(HttpRestServerAutoConfiguration.class);
 
     @Value("${netty.servr.port:8568}")
     private int nettyPort;
@@ -36,21 +31,15 @@ public class NettyConfig implements ApplicationContextAware, SmartInitializingSi
         this.applicationContext = (ConfigurableApplicationContext) context;
     }
 
-    @Autowired
-    private Environment environment;
-
     //基于netty实现rest风格的http请求,仿造Spring依赖注入
     @Override
     public void afterSingletonsInstantiated() {
-        SpringRestBeanScanStrategy springRestBeanScanStrategy = new SpringRestBeanScanStrategy(applicationContext);
-        HttpRestPipelineInit httpRestPipelineInit = new HttpRestPipelineInit(springRestBeanScanStrategy);
+        SpringRestAnnotationScanner restAnnotationScanner = new SpringRestAnnotationScanner(applicationContext);
+        HttpRestPipelineInit httpRestPipelineInit = new HttpRestPipelineInit(restAnnotationScanner);
         NettyHttpRestServer nettyNio = new NettyHttpRestServer(httpRestPipelineInit);
         nettyNio.startServer(nettyPort);
 
         logger.info("netty http server start on port {}", nettyPort);
-
-        BindResult<UserInfo> bind = Binder.get(environment).bind("", UserInfo.class);
-
     }
 
 
