@@ -104,12 +104,11 @@ public class RestProcessor {
 
     public void invoke(ChannelHandlerContext ctx, FullHttpRequest request) {
         String queryUri = request.uri(); //获取客户端访问的Uri
-        System.out.println("客户端访问的Uri是:" + queryUri);
+        logger.info("客户端访问的Uri是:{}", queryUri);
         //分割掉get请求携带的参数
         String uri = queryUri;
         if (uri.contains("?")) {
             uri = uri.substring(0, uri.indexOf("?"));
-            System.out.println("去掉get参数url是:" + uri);
         }
         //判断请求的url是否存在,uri没有映射的方法返回404
         if (!urlMethodInfoMap.containsKey(uri)) {

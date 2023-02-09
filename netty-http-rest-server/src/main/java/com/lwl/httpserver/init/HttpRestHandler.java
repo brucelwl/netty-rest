@@ -83,7 +83,7 @@ public class HttpRestHandler extends SimpleChannelInboundHandler<FullHttpRequest
         //如果自定义压缩算法,返回头需要添加压缩算法
         //response.headers().set(HttpHeaderNames.CONTENT_ENCODING, "gzip");
 
-        System.out.println("原始字节数:" + content.readableBytes());
+        logger.info("原始字节数:{}", content.readableBytes());
 
         response.content().writeBytes(content);
         content.release();
