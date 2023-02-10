@@ -5,7 +5,6 @@ import com.lwl.httpserver.mvc.RestAnnotationScanner;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -19,6 +18,7 @@ import org.slf4j.helpers.NOPLogger;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Asynchronous networking with Netty
@@ -85,14 +85,21 @@ public class NettyHttpRestServer {
                 .handler(new LoggingHandler(LogLevel.INFO))
                 .childHandler(channelInitializer);
 
-        ChannelFuture future = bootstrap.bind();
-        future.addListener((ChannelFutureListener) future1 -> {
-            if (future1.isSuccess()) {
-                logPrint("HttpRestServer start success on port: " + port);
-            } else {
-                logPrint("HttpRestServer start failed:" + future1.cause().getMessage());
-            }
-        });
+        ChannelFuture future = bootstrap.bind().syncUninterruptibly();
+        try {
+            future.get(10, TimeUnit.SECONDS);
+            logPrint("HttpRestServer start success on port: " + port);
+        } catch (Exception ex) {
+            logPrint("HttpRestServer start failed:" + ex.getMessage());
+        }
+
+        //future.addListener((ChannelFutureListener) future1 -> {
+        //    if (future1.isSuccess()) {
+        //        logPrint("HttpRestServer start success on port: " + port);
+        //    } else {
+        //        logPrint("HttpRestServer start failed:" + future1.cause().getMessage());
+        //    }
+        //});
 
     }
 
