@@ -1,6 +1,5 @@
 package com.lwl.httpserver.mvc;
 
-import com.lwl.httpserver.mvc.RestAnnotationScanner;
 import com.lwl.httpserver.mvc.annotation.Rest;
 import org.springframework.context.ConfigurableApplicationContext;
 

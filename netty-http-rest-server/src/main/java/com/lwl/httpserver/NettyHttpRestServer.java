@@ -1,10 +1,12 @@
 package com.lwl.httpserver;
 
 import com.lwl.httpserver.init.HttpRestPipelineInit;
+import com.lwl.httpserver.mvc.RestAnnotationScanner;
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
@@ -13,6 +15,7 @@ import io.netty.handler.logging.LoggingHandler;
 import io.netty.util.concurrent.Future;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.helpers.NOPLogger;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -42,10 +45,14 @@ public class NettyHttpRestServer {
 
     private static List<NioEventLoopGroup> nioEventLoopGroups = new ArrayList<>(2);
 
-    private final ChannelHandler handlers;
+    private final ChannelInitializer<Channel> channelInitializer;
 
-    public NettyHttpRestServer(HttpRestPipelineInit hannelInitializer) {
-        this.handlers = hannelInitializer;
+    public NettyHttpRestServer(ChannelInitializer<Channel> channelInitializer) {
+        this.channelInitializer = channelInitializer;
+    }
+
+    public NettyHttpRestServer(RestAnnotationScanner restAnnotationScanner) {
+        this.channelInitializer = new HttpRestPipelineInit(restAnnotationScanner);
     }
 
     public void startServer(int port) {
@@ -76,26 +83,25 @@ public class NettyHttpRestServer {
                 .childOption(ChannelOption.SO_TIMEOUT, 15_000)
                 .localAddress(port)
                 .handler(new LoggingHandler(LogLevel.INFO))
-                .childHandler(handlers);
+                .childHandler(channelInitializer);
 
         ChannelFuture future = bootstrap.bind();
         future.addListener((ChannelFutureListener) future1 -> {
             if (future1.isSuccess()) {
-                logger.info("Server bound success on port: {}", port);
+                logPrint("HttpRestServer start success on port: " + port);
             } else {
-                logger.error("Bound attempt failed:", future1.cause());
-                future1.cause().printStackTrace();
+                logPrint("HttpRestServer start failed:" + future1.cause().getMessage());
             }
         });
 
     }
 
-    public static void stopServer() {
-        System.out.println("netty server stop...");
+    public void stopServer() {
+        logPrint("HttpRestServer stopping...");
         List<Future<?>> futures = new ArrayList<>(nioEventLoopGroups.size());
         for (NioEventLoopGroup nioEventLoopGroup : nioEventLoopGroups) {
             Future<?> future = nioEventLoopGroup.shutdownGracefully();
-            future.addListener((f) -> System.out.println("netty server stopped : " + future.isSuccess()));
+            future.addListener((f) -> logPrint("HttpRestServer stopped : " + future.isSuccess()));
             futures.add(future);
         }
         futures.forEach(future -> {
@@ -106,6 +112,14 @@ public class NettyHttpRestServer {
             }
         });
 
+    }
+
+    private void logPrint(String msg) {
+        if (logger instanceof NOPLogger) {
+            System.out.println(msg);
+        } else {
+            logger.info(msg);
+        }
     }
 
 }

@@ -20,28 +20,28 @@ import javax.net.ssl.SSLEngine;
  */
 public class HttpRestPipelineInit extends ChannelInitializer<Channel> {
 
-    private final boolean clientMode;
-    private SslContext sslContext;
+    private final boolean sslClientMode;
+    private final SslContext sslContext;
     private boolean gzipOrDeflate;
     private final HttpRestHandler httpRestHandler;
 
-    public HttpRestPipelineInit(RestAnnotationScanner scanStrategy) {
-        this(scanStrategy, false, false, null);
+    public HttpRestPipelineInit(RestAnnotationScanner scanner) {
+        this(scanner, false, false, null);
     }
 
-    public HttpRestPipelineInit(RestAnnotationScanner scanStrategy, boolean clientMode, SslContext sslContext) {
-        this(scanStrategy, clientMode, false, sslContext);
+    public HttpRestPipelineInit(RestAnnotationScanner scanner, boolean sslClientMode, SslContext sslContext) {
+        this(scanner, sslClientMode, false, sslContext);
     }
 
-    public HttpRestPipelineInit(RestAnnotationScanner scanStrategy, boolean clientMode, boolean gzipOrDeflate) {
-        this(scanStrategy, clientMode, gzipOrDeflate, null);
+    public HttpRestPipelineInit(RestAnnotationScanner scanner, boolean sslClientMode, boolean gzipOrDeflate) {
+        this(scanner, sslClientMode, gzipOrDeflate, null);
     }
 
-    public HttpRestPipelineInit(RestAnnotationScanner scanStrategy, boolean clientMode, boolean gzipOrDeflate, SslContext sslContext) {
+    public HttpRestPipelineInit(RestAnnotationScanner scanner, boolean sslClientMode, boolean gzipOrDeflate, SslContext sslContext) {
         this.sslContext = sslContext;
-        this.clientMode = clientMode;
+        this.sslClientMode = sslClientMode;
         this.gzipOrDeflate = gzipOrDeflate;
-        RestProcessor processor = new RestProcessor(scanStrategy);
+        RestProcessor processor = new RestProcessor(scanner);
         httpRestHandler = new HttpRestHandler(processor);
         try {
             processor.prepare();
@@ -55,7 +55,7 @@ public class HttpRestPipelineInit extends ChannelInitializer<Channel> {
         ChannelPipeline pipeline = ch.pipeline();
         if (sslContext != null) {
             SSLEngine sslEngine = sslContext.newEngine(ch.alloc());
-            sslEngine.setUseClientMode(clientMode);
+            sslEngine.setUseClientMode(sslClientMode);
             pipeline.addFirst("ssl", new SslHandler(sslEngine));
         }
         //pipeline.addLast("decoder", new HttpRequestDecoder());
@@ -67,9 +67,11 @@ public class HttpRestPipelineInit extends ChannelInitializer<Channel> {
         //请求数据聚合
         pipeline.addLast("httpAggregator", new HttpObjectAggregator(65535));
 
-        //启数据压缩,必须保证HttpContentCompressor#decode方法在向客户端返回数据之前执行,因此必须放在httpRestHandler之前
-        //当返回的数据超过1024字节时压缩数据
-        pipeline.addLast("httpContentCompressor", new HttpContentCompressor(6, 15, 8, 1024));
+        if (gzipOrDeflate) {
+            //启数据压缩,必须保证HttpContentCompressor#decode方法在向客户端返回数据之前执行,因此必须放在httpRestHandler之前
+            //当返回的数据超过1024字节时压缩数据
+            pipeline.addLast("httpContentCompressor", new HttpContentCompressor(6, 15, 8, 1024));
+        }
 
         //pipeline.addLast("httpChunked", new ChunkedWriteHandler());
 
