@@ -1,6 +1,7 @@
 package com.lwl.httpserver.init;
 
 import com.alibaba.fastjson.JSON;
+import com.lwl.httpserver.HttpServerConfig;
 import com.lwl.httpserver.mvc.RestProcessor;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -22,6 +23,10 @@ import io.netty.util.concurrent.GenericFutureListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+
 /**
  * @author liwenlong - 2018/3/11 16:12
  */
@@ -29,10 +34,19 @@ import org.slf4j.LoggerFactory;
 public class HttpRestHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
     private static final Logger logger = LoggerFactory.getLogger(HttpRestHandler.class);
 
-    private RestProcessor processor;
+    private final RestProcessor processor;
+    private final HttpServerConfig config;
+    private final ThreadPoolExecutor threadPoolExecutor;
 
-    public HttpRestHandler(RestProcessor processor) {
+    public HttpRestHandler(RestProcessor processor, HttpServerConfig httpServerConfig) {
         this.processor = processor;
+        this.config = httpServerConfig;
+
+        processor.prepare();
+
+        threadPoolExecutor = new ThreadPoolExecutor(config.getMinThreads(), config.getMaxThreads(),
+                config.getThreadKeepAliveMs(), TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>(),
+                new NameThreadFactory("http-rest-handler-"));
     }
 
     @Override
@@ -41,10 +55,14 @@ public class HttpRestHandler extends SimpleChannelInboundHandler<FullHttpRequest
             sendError(ctx, HttpResponseStatus.BAD_REQUEST);
             return;
         }
-
         logger.info("request content:{}", request.content().toString(CharsetUtil.UTF_8));
-
-        processor.invoke(ctx, request);
+        threadPoolExecutor.execute(() -> {
+            try {
+                processor.invoke(ctx, request);
+            } catch (Exception ex) {
+                logger.info("处理请求异常:", ex);
+            }
+        });
     }
 
     /**

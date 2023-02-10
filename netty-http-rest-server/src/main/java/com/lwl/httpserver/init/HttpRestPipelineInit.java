@@ -1,5 +1,6 @@
 package com.lwl.httpserver.init;
 
+import com.lwl.httpserver.HttpServerConfig;
 import com.lwl.httpserver.mvc.RestAnnotationScanner;
 import com.lwl.httpserver.mvc.RestProcessor;
 import io.netty.channel.Channel;
@@ -20,42 +21,20 @@ import javax.net.ssl.SSLEngine;
  */
 public class HttpRestPipelineInit extends ChannelInitializer<Channel> {
 
-    private final boolean sslClientMode;
-    private final SslContext sslContext;
-    private boolean gzipOrDeflate;
+    private HttpServerConfig config;
     private final HttpRestHandler httpRestHandler;
 
-    public HttpRestPipelineInit(RestAnnotationScanner scanner) {
-        this(scanner, false, false, null);
-    }
-
-    public HttpRestPipelineInit(RestAnnotationScanner scanner, boolean sslClientMode, SslContext sslContext) {
-        this(scanner, sslClientMode, false, sslContext);
-    }
-
-    public HttpRestPipelineInit(RestAnnotationScanner scanner, boolean sslClientMode, boolean gzipOrDeflate) {
-        this(scanner, sslClientMode, gzipOrDeflate, null);
-    }
-
-    public HttpRestPipelineInit(RestAnnotationScanner scanner, boolean sslClientMode, boolean gzipOrDeflate, SslContext sslContext) {
-        this.sslContext = sslContext;
-        this.sslClientMode = sslClientMode;
-        this.gzipOrDeflate = gzipOrDeflate;
-        RestProcessor processor = new RestProcessor(scanner);
-        httpRestHandler = new HttpRestHandler(processor);
-        try {
-            processor.prepare();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+    public HttpRestPipelineInit(RestAnnotationScanner scanner, HttpServerConfig config) {
+        this.config = config;
+        this.httpRestHandler = new HttpRestHandler(new RestProcessor(scanner), config);
     }
 
     @Override
     protected void initChannel(Channel ch) throws Exception {
         ChannelPipeline pipeline = ch.pipeline();
-        if (sslContext != null) {
-            SSLEngine sslEngine = sslContext.newEngine(ch.alloc());
-            sslEngine.setUseClientMode(sslClientMode);
+        if (config.getSslContext() != null) {
+            SSLEngine sslEngine = config.getSslContext().newEngine(ch.alloc());
+            sslEngine.setUseClientMode(config.isSslClientMode());
             pipeline.addFirst("ssl", new SslHandler(sslEngine));
         }
         //pipeline.addLast("decoder", new HttpRequestDecoder());
@@ -67,10 +46,11 @@ public class HttpRestPipelineInit extends ChannelInitializer<Channel> {
         //请求数据聚合
         pipeline.addLast("httpAggregator", new HttpObjectAggregator(65535));
 
-        if (gzipOrDeflate) {
+        if (config.isCompressionEnabled()) {
             //启数据压缩,必须保证HttpContentCompressor#decode方法在向客户端返回数据之前执行,因此必须放在httpRestHandler之前
             //当返回的数据超过1024字节时压缩数据
-            pipeline.addLast("httpContentCompressor", new HttpContentCompressor(6, 15, 8, 1024));
+            pipeline.addLast("httpContentCompressor",
+                    new HttpContentCompressor(6, 15, 8, config.getCompressionThreshold()));
         }
 
         //pipeline.addLast("httpChunked", new ChunkedWriteHandler());

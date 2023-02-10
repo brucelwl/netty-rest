@@ -44,6 +44,7 @@ public class NettyHttpRestServer {
     private static final Logger logger = LoggerFactory.getLogger(NettyHttpRestServer.class);
 
     private static List<NioEventLoopGroup> nioEventLoopGroups = new ArrayList<>(2);
+    private HttpServerConfig config;
 
     private final ChannelInitializer<Channel> channelInitializer;
 
@@ -51,12 +52,13 @@ public class NettyHttpRestServer {
         this.channelInitializer = channelInitializer;
     }
 
-    public NettyHttpRestServer(RestAnnotationScanner restAnnotationScanner) {
-        this.channelInitializer = new HttpRestPipelineInit(restAnnotationScanner);
+    public NettyHttpRestServer(RestAnnotationScanner restAnnotationScanner, HttpServerConfig config) {
+        this.channelInitializer = new HttpRestPipelineInit(restAnnotationScanner, config);
+        this.config = config;
     }
 
-    public void startServer(int port) {
-        NioEventLoopGroup acceptGroup = new NioEventLoopGroup();
+    public void startServer() {
+        NioEventLoopGroup acceptGroup = new NioEventLoopGroup(1);
         NioEventLoopGroup handlerGroup = new NioEventLoopGroup();
         nioEventLoopGroups.add(acceptGroup);
         nioEventLoopGroups.add(handlerGroup);
@@ -81,14 +83,14 @@ public class NettyHttpRestServer {
                 //.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT) //使用对象池重用缓冲区
                 .childOption(ChannelOption.SO_SNDBUF, 1024) //发送缓冲区
                 .childOption(ChannelOption.SO_TIMEOUT, 15_000)
-                .localAddress(port)
+                .localAddress(config.getPort())
                 .handler(new LoggingHandler(LogLevel.INFO))
                 .childHandler(channelInitializer);
 
         ChannelFuture future = bootstrap.bind().syncUninterruptibly();
         try {
             future.get(10, TimeUnit.SECONDS);
-            logPrint("HttpRestServer start success on port: " + port);
+            logPrint("HttpRestServer start success on port: " + config.getPort());
         } catch (Exception ex) {
             logPrint("HttpRestServer start failed:" + ex.getMessage());
         }
