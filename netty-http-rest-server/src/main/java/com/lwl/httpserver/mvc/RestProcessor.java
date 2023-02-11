@@ -120,22 +120,22 @@ public class RestProcessor {
             HttpRestHandler.sendError(ctx, HttpResponseStatus.METHOD_NOT_ALLOWED);
             return;
         }
-        //解析请求参数
-        Map<String, List<String>> queryParams = null;
-        if (httpMethod == HttpMethod.GET) {
-            //解析get请求参数
-            queryParams = decodeGetParams(queryUri);
-        } else if (request.method() == HttpMethod.POST) {
-            // 处理POST请求
-            queryParams = decodePostParams(request);
-        }
-        //解析方法参数名
+        //获取方法参数名
         String[] parameterNames = methodInfo.getParameterNames();
         //获取参数类型
         Type[] parameterTypes = methodInfo.getGenericParamTypes();
         //获取参数对应的注解
         ReqParam[] reqParamAnnotations = methodInfo.getReqParamAnnotations();
         try {
+            //解析请求参数
+            Map<String, List<String>> queryParams = null;
+            if (httpMethod == HttpMethod.GET) {
+                //解析get请求参数
+                queryParams = decodeGetParams(queryUri);
+            } else if (request.method() == HttpMethod.POST) {
+                // 处理POST请求
+                queryParams = decodePostParams(request);
+            }
             MethodInvokeArgs result = parseMethodInvokeArgs(parameterNames, parameterTypes, reqParamAnnotations, queryParams);
             if (result.getStatus() == HttpResponseStatus.BAD_REQUEST) {
                 HttpRestHandler.sendError(ctx, HttpResponseStatus.BAD_REQUEST);

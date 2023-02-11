@@ -78,11 +78,9 @@ public class NettyHttpRestServer {
                 .option(ChannelOption.SO_BACKLOG, 200) //指定了内核为此套接口排队的最大连接数
                 .option(ChannelOption.SO_RCVBUF, 256)  //接收缓冲区
                 //.option(ChannelOption.SO_SNDBUF,1024)
-                //.option(ChannelOption.SO_TIMEOUT, 15_000)
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 30_000) //设置连接超时时间
                 //.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT) //使用对象池重用缓冲区
                 .childOption(ChannelOption.SO_SNDBUF, 1024) //发送缓冲区
-                .childOption(ChannelOption.SO_TIMEOUT, 15_000)
                 .localAddress(config.getPort())
                 .handler(new LoggingHandler(LogLevel.INFO))
                 .childHandler(channelInitializer);
