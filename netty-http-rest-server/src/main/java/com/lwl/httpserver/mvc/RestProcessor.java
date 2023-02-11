@@ -102,7 +102,6 @@ public class RestProcessor {
 
     public void invoke(ChannelHandlerContext ctx, FullHttpRequest request) {
         String queryUri = request.uri(); //获取客户端访问的Uri
-        logger.info("客户端访问的Uri是:{}", queryUri);
         //分割掉get请求携带的参数
         String uri = queryUri;
         if (uri.contains("?")) {
@@ -110,6 +109,7 @@ public class RestProcessor {
         }
         //判断请求的url是否存在,uri没有映射的方法返回404
         if (!urlMethodInfoMap.containsKey(uri)) {
+            logger.warn("response http 404, url from client is:{}", queryUri);
             HttpRestHandler.sendError(ctx, HttpResponseStatus.NOT_FOUND);
             return;
         }
@@ -149,7 +149,7 @@ public class RestProcessor {
             }
             HttpRestHandler.sendResp(ctx, rtn, request);
         } catch (Exception e) {
-            logger.info("处理请求:{},发生异常:", queryUri, e);
+            logger.error("处理请求:{},发生异常:", queryUri, e);
             HttpRestHandler.sendError(ctx, HttpResponseStatus.INTERNAL_SERVER_ERROR);
         }
     }

@@ -55,7 +55,9 @@ public class HttpRestHandler extends SimpleChannelInboundHandler<FullHttpRequest
             sendError(ctx, HttpResponseStatus.BAD_REQUEST);
             return;
         }
-        logger.info("request content:{}", request.content().toString(CharsetUtil.UTF_8));
+        if (logger.isDebugEnabled()) {
+            logger.info("request content:{}", request.content().toString(CharsetUtil.UTF_8));
+        }
         threadPoolExecutor.execute(() -> {
             try {
                 processor.invoke(ctx, request);
@@ -67,9 +69,6 @@ public class HttpRestHandler extends SimpleChannelInboundHandler<FullHttpRequest
 
     /**
      * 向客户端发送错误信息
-     *
-     * @param ctx
-     * @param status
      */
     public static void sendError(ChannelHandlerContext ctx, HttpResponseStatus status) {
         FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status,
@@ -101,8 +100,6 @@ public class HttpRestHandler extends SimpleChannelInboundHandler<FullHttpRequest
         //如果自定义压缩算法,返回头需要添加压缩算法
         //response.headers().set(HttpHeaderNames.CONTENT_ENCODING, "gzip");
 
-        logger.info("原始字节数:{}", content.readableBytes());
-
         response.content().writeBytes(content);
         content.release();
 
@@ -119,9 +116,9 @@ public class HttpRestHandler extends SimpleChannelInboundHandler<FullHttpRequest
             public void operationComplete(Future<? super Void> future) throws Exception {
                 if (!future.isSuccess()) {
                     Throwable cause = future.cause();
-                    cause.printStackTrace();
+                    logger.error("response error:", cause);
                 } else {
-                    logger.info("response success!");
+                    logger.debug("response success!");
                 }
             }
         });
