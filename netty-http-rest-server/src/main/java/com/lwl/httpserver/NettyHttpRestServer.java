@@ -1,7 +1,9 @@
 package com.lwl.httpserver;
 
 import com.lwl.httpserver.init.HttpRestPipelineInit;
-import com.lwl.httpserver.mvc.RestAnnotationScanner;
+import com.lwl.httpserver.mvc.extension.HttpMessageConverter;
+import com.lwl.httpserver.mvc.extension.MessageConverterRegistry;
+import com.lwl.httpserver.mvc.extension.RestAnnotationScanner;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -43,18 +45,17 @@ import java.util.concurrent.TimeUnit;
 public class NettyHttpRestServer {
     private static final Logger logger = LoggerFactory.getLogger(NettyHttpRestServer.class);
 
-    private static List<NioEventLoopGroup> nioEventLoopGroups = new ArrayList<>(2);
-    private HttpServerConfig config;
-
+    private static final List<NioEventLoopGroup> nioEventLoopGroups = new ArrayList<>(2);
+    private final HttpServerConfig config;
     private final ChannelInitializer<Channel> channelInitializer;
-
-    public NettyHttpRestServer(ChannelInitializer<Channel> channelInitializer) {
-        this.channelInitializer = channelInitializer;
-    }
 
     public NettyHttpRestServer(RestAnnotationScanner restAnnotationScanner, HttpServerConfig config) {
         this.channelInitializer = new HttpRestPipelineInit(restAnnotationScanner, config);
         this.config = config;
+    }
+
+    public void setHttpMessageConverter(HttpMessageConverter converter) {
+        MessageConverterRegistry.setHttpMessageConverter(converter);
     }
 
     public void startServer() {

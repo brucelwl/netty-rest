@@ -1,10 +1,11 @@
 package com.lwl.httpserver.mvc;
 
-import com.alibaba.fastjson.JSON;
 import com.lwl.httpserver.init.HttpRestHandler;
 import com.lwl.httpserver.mvc.annotation.ReqMapping;
 import com.lwl.httpserver.mvc.annotation.ReqParam;
 import com.lwl.httpserver.mvc.annotation.Rest;
+import com.lwl.httpserver.mvc.extension.MessageConverterRegistry;
+import com.lwl.httpserver.mvc.extension.RestAnnotationScanner;
 import com.lwl.httpserver.util.ClassTypeUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -234,7 +235,7 @@ public class RestProcessor {
                     : DefaultConversionService.getSharedInstance().convert(values, (Class<?>) parameterType);
         }
         //除了基础类型为, 仅支持application/json请求
-        return JSON.parseObject(reqBody, parameterType);
+        return MessageConverterRegistry.parseObject(reqBody, parameterType);
         //AbstractEnvironment environment = new AbstractEnvironment() {
         //};
         //MapPropertySource mapPropertySource = new MapPropertySource("http-req-params", new HashMap<>(httpParams));

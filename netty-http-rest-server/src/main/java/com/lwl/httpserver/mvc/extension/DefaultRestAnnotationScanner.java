@@ -1,6 +1,7 @@
-package com.lwl.httpserver.mvc;
+package com.lwl.httpserver.mvc.extension;
 
 
+import com.lwl.httpserver.mvc.ClassScanner;
 import com.lwl.httpserver.mvc.annotation.Rest;
 
 import java.util.HashMap;

@@ -1,6 +1,6 @@
 package com.lwl.nettyrest;
 
-import com.alibaba.fastjson.JSON;
+import com.lwl.httpserver.mvc.extension.MessageConverterRegistry;
 import com.lwl.nettyrest.entity.UserInfo;
 import org.junit.jupiter.api.Test;
 
@@ -27,7 +27,7 @@ public class CommonTest {
         userInfo.setPwd("aaaazsdkjhlklkgg,jhg急急急急急急急急急急急急国际劳工开发开放开发了一个了");
         userInfo.setLoginname("aaaaa中文");
 
-        byte[] bytes = JSON.toJSONBytes(userInfo);
+        byte[] bytes = MessageConverterRegistry.writeObject(userInfo);
 
         System.out.println(bytes.length);
 

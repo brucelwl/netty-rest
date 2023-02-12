@@ -1,7 +1,7 @@
 package com.lwl.httpserver.init;
 
 import com.lwl.httpserver.HttpServerConfig;
-import com.lwl.httpserver.mvc.RestAnnotationScanner;
+import com.lwl.httpserver.mvc.extension.RestAnnotationScanner;
 import com.lwl.httpserver.mvc.RestProcessor;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;

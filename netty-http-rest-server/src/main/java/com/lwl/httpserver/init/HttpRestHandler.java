@@ -1,8 +1,8 @@
 package com.lwl.httpserver.init;
 
-import com.alibaba.fastjson.JSON;
 import com.lwl.httpserver.HttpServerConfig;
 import com.lwl.httpserver.mvc.RestProcessor;
+import com.lwl.httpserver.mvc.extension.MessageConverterRegistry;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
@@ -153,17 +153,16 @@ public class HttpRestHandler extends SimpleChannelInboundHandler<FullHttpRequest
      * 向客户端发送错误信息
      */
     public static void sendResp(ChannelHandlerContext ctx, Object obj, FullHttpRequest req) {
+        FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
         ByteBuf content;
         if (obj instanceof String) {
             content = Unpooled.copiedBuffer((String) obj, CharsetUtil.UTF_8);
+            response.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/plain; charset=UTF-8");
         } else {
-            byte[] bytes = JSON.toJSONBytes(obj);
+            byte[] bytes = MessageConverterRegistry.writeObject(obj);
             content = Unpooled.wrappedBuffer(bytes);
+            response.headers().set(HttpHeaderNames.CONTENT_TYPE, "application/json");
         }
-
-        FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-        response.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/plain; charset=UTF-8");
-
         //必须要写返回数据的长度,否则在服务端不关闭Channel的情况下,客户端可能无法读取到数据
         response.headers().set(HttpHeaderNames.CONTENT_LENGTH, content.readableBytes());
 

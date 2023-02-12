@@ -1,6 +1,7 @@
 package com.lwl.nettyrest;
 
 
+import com.lwl.entity.UserInfo;
 import com.lwl.httpserver.mvc.ReqMethod;
 import com.lwl.httpserver.mvc.annotation.ReqMapping;
 import com.lwl.httpserver.mvc.annotation.Rest;
@@ -28,8 +29,8 @@ public class ThirdRest {
 
 
     @ReqMapping(method = {ReqMethod.GET})
-    public void sayHello4(String name) {
-
+    public UserInfo sayHello4(String name) {
+        return new UserInfo();
     }
 
 
