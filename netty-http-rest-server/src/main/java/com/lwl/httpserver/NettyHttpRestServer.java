@@ -2,7 +2,7 @@ package com.lwl.httpserver;
 
 import com.lwl.httpserver.init.HttpRestPipelineInit;
 import com.lwl.httpserver.mvc.extension.HttpMessageConverter;
-import com.lwl.httpserver.mvc.extension.MessageConverterRegistry;
+import com.lwl.httpserver.mvc.MessageConverterRegistry;
 import com.lwl.httpserver.mvc.extension.RestAnnotationScanner;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;

@@ -2,7 +2,7 @@ package com.lwl.httpserver.boot.autoconfigure;
 
 import com.lwl.httpserver.HttpServerConfig;
 import com.lwl.httpserver.NettyHttpRestServer;
-import com.lwl.httpserver.mvc.SpringRestAnnotationScanner;
+import com.lwl.httpserver.mvc.extension.SpringRestAnnotationScanner;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.SmartInitializingSingleton;

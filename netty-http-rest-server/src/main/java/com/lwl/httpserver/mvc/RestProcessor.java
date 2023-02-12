@@ -4,7 +4,6 @@ import com.lwl.httpserver.init.HttpRestHandler;
 import com.lwl.httpserver.mvc.annotation.ReqMapping;
 import com.lwl.httpserver.mvc.annotation.ReqParam;
 import com.lwl.httpserver.mvc.annotation.Rest;
-import com.lwl.httpserver.mvc.extension.MessageConverterRegistry;
 import com.lwl.httpserver.mvc.extension.RestAnnotationScanner;
 import com.lwl.httpserver.util.ClassTypeUtil;
 import io.netty.channel.ChannelHandlerContext;

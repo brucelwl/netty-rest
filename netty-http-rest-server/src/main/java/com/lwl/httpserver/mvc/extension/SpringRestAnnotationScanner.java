@@ -1,4 +1,4 @@
-package com.lwl.httpserver.mvc;
+package com.lwl.httpserver.mvc.extension;
 
 import com.lwl.httpserver.mvc.annotation.Rest;
 import com.lwl.httpserver.mvc.extension.RestAnnotationScanner;

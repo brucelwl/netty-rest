@@ -1,6 +1,6 @@
 package com.lwl.nettyrest;
 
-import com.lwl.httpserver.mvc.extension.MessageConverterRegistry;
+import com.lwl.httpserver.mvc.MessageConverterRegistry;
 import com.lwl.nettyrest.entity.UserInfo;
 import org.junit.jupiter.api.Test;
 

@@ -2,7 +2,7 @@ package com.lwl.httpserver.init;
 
 import com.lwl.httpserver.HttpServerConfig;
 import com.lwl.httpserver.mvc.RestProcessor;
-import com.lwl.httpserver.mvc.extension.MessageConverterRegistry;
+import com.lwl.httpserver.mvc.MessageConverterRegistry;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
