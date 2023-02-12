@@ -14,15 +14,27 @@ import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
+import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.codec.http.QueryStringDecoder;
+import io.netty.handler.codec.http.multipart.DefaultHttpDataFactory;
+import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder;
+import io.netty.handler.codec.http.multipart.InterfaceHttpData;
+import io.netty.handler.codec.http.multipart.MemoryAttribute;
 import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -55,16 +67,75 @@ public class HttpRestHandler extends SimpleChannelInboundHandler<FullHttpRequest
             sendError(ctx, HttpResponseStatus.BAD_REQUEST);
             return;
         }
-        if (logger.isDebugEnabled()) {
-            logger.info("request content:{}", request.content().toString(CharsetUtil.UTF_8));
+        Map<String, List<String>> reqParams = null;
+        String reqBody = null;
+        String contentType = request.headers().get(HttpHeaderNames.CONTENT_TYPE);
+        if (HttpHeaderValues.APPLICATION_JSON.toString().equals(contentType)) {
+            reqBody = request.content().toString(CharsetUtil.UTF_8);
+            if (logger.isDebugEnabled()) {
+                logger.debug("request body:{}", reqBody);
+            }
+        } else {
+            reqParams = parseReqParams(request);
         }
+
+        Map<String, List<String>> finalReqParams = reqParams;
+        String finalReqBody = reqBody;
         threadPoolExecutor.execute(() -> {
             try {
-                processor.invoke(ctx, request);
+                processor.invoke(ctx, request, finalReqParams, finalReqBody);
             } catch (Exception ex) {
                 logger.info("处理请求异常:", ex);
             }
         });
+    }
+
+    private Map<String, List<String>> parseReqParams(FullHttpRequest request) {
+        String queryUri = request.uri();
+        HttpMethod httpMethod = request.method();
+        //解析请求参数
+        Map<String, List<String>> reqParams = null;
+        if (httpMethod == HttpMethod.GET) {
+            //解析get请求参数
+            reqParams = decodeGetParams(queryUri);
+        } else if (request.method() == HttpMethod.POST) {
+            // 处理POST请求
+            reqParams = decodePostParams(request);
+        }
+        return reqParams;
+    }
+
+    /**
+     * 解析get的请求参数
+     *
+     * @param queryUri 浏览器输入的url
+     */
+    private Map<String, List<String>> decodeGetParams(String queryUri) {
+        QueryStringDecoder queryStringDecoder = new QueryStringDecoder(queryUri);
+        return queryStringDecoder.parameters();
+    }
+
+    /**
+     * 解析post请求参数
+     */
+    private Map<String, List<String>> decodePostParams(FullHttpRequest request) {
+        HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(
+                new DefaultHttpDataFactory(false), request);
+        List<InterfaceHttpData> postData = decoder.getBodyHttpDatas(); //
+        if (postData.size() == 0) {
+            return Collections.emptyMap();
+        }
+        Map<String, List<String>> params = new LinkedHashMap<>(postData.size());
+        for (InterfaceHttpData data : postData) {
+            if (data.getHttpDataType() == InterfaceHttpData.HttpDataType.Attribute) {
+                MemoryAttribute attribute = (MemoryAttribute) data;
+                // Often there's only 1 value.
+                List<String> values = params.computeIfAbsent(attribute.getName(), k -> new ArrayList<>(1));
+                values.add(attribute.getValue());
+            }
+        }
+        decoder.destroy();
+        return params;
     }
 
     /**

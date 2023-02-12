@@ -1,5 +1,6 @@
 package com.lwl.httpserver.mvc;
 
+import com.alibaba.fastjson.JSON;
 import com.lwl.httpserver.init.HttpRestHandler;
 import com.lwl.httpserver.mvc.annotation.ReqMapping;
 import com.lwl.httpserver.mvc.annotation.ReqParam;
@@ -9,11 +10,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.QueryStringDecoder;
-import io.netty.handler.codec.http.multipart.DefaultHttpDataFactory;
-import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder;
-import io.netty.handler.codec.http.multipart.InterfaceHttpData;
-import io.netty.handler.codec.http.multipart.MemoryAttribute;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.LocalVariableTableParameterNameDiscoverer;
@@ -23,10 +19,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -100,21 +93,23 @@ public class RestProcessor {
         }
     }
 
-    public void invoke(ChannelHandlerContext ctx, FullHttpRequest request) {
+
+    public void invoke(ChannelHandlerContext ctx, FullHttpRequest request,
+                       Map<String, List<String>> reqParams, String reqBody) {
         String queryUri = request.uri(); //获取客户端访问的Uri
         //分割掉get请求携带的参数
         String uri = queryUri;
         if (uri.contains("?")) {
             uri = uri.substring(0, uri.indexOf("?"));
         }
-        //判断请求的url是否存在,uri没有映射的方法返回404
-        if (!urlMethodInfoMap.containsKey(uri)) {
+        //通过url获取映射请求的方法,uri没有映射的方法返回404
+        UrlMappingMethodInfo methodInfo = urlMethodInfoMap.get(uri);
+        if (methodInfo == null) {
             logger.warn("response http 404, url from client is:{}", queryUri);
             HttpRestHandler.sendError(ctx, HttpResponseStatus.NOT_FOUND);
             return;
         }
         HttpMethod httpMethod = request.method(); //获取客户端请求方法
-        UrlMappingMethodInfo methodInfo = urlMethodInfoMap.get(uri);//通过url获取映射请求的方法
         boolean supportMethod = methodInfo.isSupportMethod(httpMethod);
         if (!supportMethod) { //不支持的请求方法
             HttpRestHandler.sendError(ctx, HttpResponseStatus.METHOD_NOT_ALLOWED);
@@ -127,16 +122,7 @@ public class RestProcessor {
         //获取参数对应的注解
         ReqParam[] reqParamAnnotations = methodInfo.getReqParamAnnotations();
         try {
-            //解析请求参数
-            Map<String, List<String>> queryParams = null;
-            if (httpMethod == HttpMethod.GET) {
-                //解析get请求参数
-                queryParams = decodeGetParams(queryUri);
-            } else if (request.method() == HttpMethod.POST) {
-                // 处理POST请求
-                queryParams = decodePostParams(request);
-            }
-            MethodInvokeArgs result = parseMethodInvokeArgs(parameterNames, parameterTypes, reqParamAnnotations, queryParams);
+            MethodInvokeArgs result = parseMethodInvokeArgs(parameterNames, parameterTypes, reqParamAnnotations, reqParams, reqBody);
             if (result.getStatus() == HttpResponseStatus.BAD_REQUEST) {
                 HttpRestHandler.sendError(ctx, HttpResponseStatus.BAD_REQUEST);
                 return;
@@ -154,37 +140,6 @@ public class RestProcessor {
         }
     }
 
-    /**
-     * 解析get的请求参数
-     *
-     * @param queryUri 浏览器输入的url
-     */
-    private Map<String, List<String>> decodeGetParams(String queryUri) {
-        QueryStringDecoder queryStringDecoder = new QueryStringDecoder(queryUri);
-        return queryStringDecoder.parameters();
-    }
-
-    /**
-     * 解析post请求参数
-     */
-    private Map<String, List<String>> decodePostParams(FullHttpRequest request) {
-        HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(
-                new DefaultHttpDataFactory(false), request);
-        List<InterfaceHttpData> postData = decoder.getBodyHttpDatas(); //
-        if (postData.size() == 0) {
-            return Collections.emptyMap();
-        }
-        Map<String, List<String>> params = new LinkedHashMap<>(postData.size());
-        for (InterfaceHttpData data : postData) {
-            if (data.getHttpDataType() == InterfaceHttpData.HttpDataType.Attribute) {
-                MemoryAttribute attribute = (MemoryAttribute) data;
-                // Often there's only 1 value.
-                List<String> values = params.computeIfAbsent(attribute.getName(), k -> new ArrayList<String>(1));
-                values.add(attribute.getValue());
-            }
-        }
-        return params;
-    }
 
     /**
      * 将扫描注解得到的url和将对用的对象,方法映射
@@ -193,10 +148,10 @@ public class RestProcessor {
      * @param methodInfo 对应控制器实例的实例方法
      */
     private void saveReqMapping(String url, UrlMappingMethodInfo methodInfo) {
-        if (urlMethodInfoMap.containsKey(url)) {
+        UrlMappingMethodInfo previous = urlMethodInfoMap.putIfAbsent(url, methodInfo);
+        if (previous != null) {
             throw new RuntimeException("存在多个请求映射:".concat(url));
         }
-        urlMethodInfoMap.put(url, methodInfo);
         logger.info("url:{} {} obj:{} methodInfo:{}", url, methodInfo.getSupportMethod(), objId(methodInfo.getObj()), methodInfo);
     }
 
@@ -231,10 +186,10 @@ public class RestProcessor {
      * @param httpParams     请求参数
      * @return
      */
-    private MethodInvokeArgs parseMethodInvokeArgs(String[] parameterNames,
-                                                   Type[] parameterTypes,
+    private MethodInvokeArgs parseMethodInvokeArgs(String[] parameterNames, Type[] parameterTypes,
                                                    ReqParam[] reqParamAnnotations,
-                                                   Map<String, List<String>> httpParams) {
+                                                   Map<String, List<String>> httpParams,
+                                                   String reqBody) {
         MethodInvokeArgs result = new MethodInvokeArgs();
         result.setStatus(HttpResponseStatus.CONTINUE);
         Object[] args = null;
@@ -248,7 +203,7 @@ public class RestProcessor {
 
                 //获取http请求参数对应的值
                 //List<String> values = httpParams.get(httpParamName);
-                Object values = getValueAndConvenience(parameterTypes[i], httpParamName, httpParams);
+                Object values = getValueAndConvenience(parameterTypes[i], httpParamName, httpParams, reqBody);
 
                 //如果该参数要求必填,且参数值为null,返回客户端错误的请求信息
                 if (values == null && paramAnno != null && paramAnno.required()) {
@@ -268,7 +223,9 @@ public class RestProcessor {
     /**
      * @param parameterType 参数类型
      */
-    private Object getValueAndConvenience(Type parameterType, String httpParamName, Map<String, List<String>> httpParams) {
+    private Object getValueAndConvenience(Type parameterType, String httpParamName,
+                                          Map<String, List<String>> httpParams,
+                                          String reqBody) {
         if (parameterType instanceof Class && ClassTypeUtil.isBasicType((Class<?>) parameterType)) {
             //一个参数可能对应多个值
             List<String> values = httpParams.get(httpParamName);
@@ -276,6 +233,8 @@ public class RestProcessor {
                     ? null
                     : DefaultConversionService.getSharedInstance().convert(values, (Class<?>) parameterType);
         }
+        //除了基础类型为, 仅支持application/json请求
+        return JSON.parseObject(reqBody, parameterType);
         //AbstractEnvironment environment = new AbstractEnvironment() {
         //};
         //MapPropertySource mapPropertySource = new MapPropertySource("http-req-params", new HashMap<>(httpParams));
@@ -296,7 +255,6 @@ public class RestProcessor {
         //}
         //ResolvableType resolvableType = ResolvableType.forType(parameterType);
         //return binder.bind("", Bindable.of(resolvableType)).orElse(null);
-        throw new IllegalArgumentException("不支持,需要手动写一个属性到对象的映射工具");
     }
 
     private ReqParam[] getReqParamAnnotation(Parameter[] parameters) {

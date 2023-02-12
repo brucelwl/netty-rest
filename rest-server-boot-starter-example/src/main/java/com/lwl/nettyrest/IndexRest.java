@@ -34,7 +34,7 @@ public class IndexRest {
         return userInfo;
     }
 
-    @ReqMapping(value = "say2", method = {ReqMethod.GET})
+    @ReqMapping(value = "say2", method = {ReqMethod.POST})
     public UserInfo sayHello2(UserInfo userInfo) {
         return userInfo;
     }

@@ -10,7 +10,6 @@ import io.netty.handler.codec.http.HttpContentCompressor;
 import io.netty.handler.codec.http.HttpContentDecompressor;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
-import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslHandler;
 
 import javax.net.ssl.SSLEngine;
@@ -46,9 +45,9 @@ public class HttpRestPipelineInit extends ChannelInitializer<Channel> {
         //请求数据聚合
         pipeline.addLast("httpAggregator", new HttpObjectAggregator(65535));
 
+        //启数据压缩,必须保证HttpContentCompressor#decode方法在向客户端返回数据之前执行,因此必须放在httpRestHandler之前
+        //当返回的数据超过1024字节时压缩数据
         if (config.isCompressionEnabled()) {
-            //启数据压缩,必须保证HttpContentCompressor#decode方法在向客户端返回数据之前执行,因此必须放在httpRestHandler之前
-            //当返回的数据超过1024字节时压缩数据
             pipeline.addLast("httpContentCompressor",
                     new HttpContentCompressor(6, 15, 8, config.getCompressionThreshold()));
         }
