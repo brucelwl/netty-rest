@@ -13,6 +13,7 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.Future;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,8 +60,9 @@ public class NettyHttpRestServer {
     }
 
     public void startServer() {
-        NioEventLoopGroup acceptGroup = new NioEventLoopGroup(1);
-        NioEventLoopGroup handlerGroup = new NioEventLoopGroup();
+        String nioThreadPrefix = config.getNioThreadPrefix() != null ? config.getNioThreadPrefix() : "http-reset";
+        NioEventLoopGroup acceptGroup = new NioEventLoopGroup(1, new DefaultThreadFactory(nioThreadPrefix + "nioAccept"));
+        NioEventLoopGroup handlerGroup = new NioEventLoopGroup(0, new DefaultThreadFactory(nioThreadPrefix + "nioHandler"));
         nioEventLoopGroups.add(acceptGroup);
         nioEventLoopGroups.add(handlerGroup);
 

@@ -24,6 +24,7 @@ public class HttpServerConfig {
     private boolean sslClientMode = false;
 
     private String threadPrefix;
+    private String nioThreadPrefix;
 
     private SslContext sslContext;
 
@@ -91,6 +92,14 @@ public class HttpServerConfig {
 
     public void setThreadPrefix(String threadPrefix) {
         this.threadPrefix = threadPrefix;
+    }
+
+    public String getNioThreadPrefix() {
+        return nioThreadPrefix;
+    }
+
+    public void setNioThreadPrefix(String nioThreadPrefix) {
+        this.nioThreadPrefix = nioThreadPrefix;
     }
 
     public SslContext getSslContext() {
