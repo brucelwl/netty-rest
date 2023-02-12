@@ -23,6 +23,8 @@ public class HttpServerConfig {
 
     private boolean sslClientMode = false;
 
+    private String threadPrefix;
+
     private SslContext sslContext;
 
 
@@ -81,6 +83,14 @@ public class HttpServerConfig {
 
     public void setSslClientMode(boolean sslClientMode) {
         this.sslClientMode = sslClientMode;
+    }
+
+    public String getThreadPrefix() {
+        return threadPrefix;
+    }
+
+    public void setThreadPrefix(String threadPrefix) {
+        this.threadPrefix = threadPrefix;
     }
 
     public SslContext getSslContext() {

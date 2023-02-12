@@ -56,9 +56,12 @@ public class HttpRestHandler extends SimpleChannelInboundHandler<FullHttpRequest
 
         processor.prepare();
 
+        String prefix = config.getThreadPrefix() != null && config.getThreadPrefix().trim().length() > 0
+                ? config.getThreadPrefix() : "http-rest-handler-";
+
         threadPoolExecutor = new ThreadPoolExecutor(config.getMinThreads(), config.getMaxThreads(),
                 config.getThreadKeepAliveMs(), TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>(),
-                new NameThreadFactory("http-rest-handler-"));
+                new NameThreadFactory(prefix));
     }
 
     @Override
