@@ -1,5 +1,6 @@
 package com.lwl.httpserver.mvc.annotation;
 
+import org.springframework.core.annotation.AliasFor;
 import org.springframework.stereotype.Component;
 
 import java.lang.annotation.Documented;
@@ -26,6 +27,7 @@ import java.lang.annotation.Target;
 @Component
 public @interface Rest {
 
+    @AliasFor(annotation=Component.class)
     String value() default "";
 
 }
