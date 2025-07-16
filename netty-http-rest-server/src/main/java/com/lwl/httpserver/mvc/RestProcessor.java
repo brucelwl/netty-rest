@@ -12,7 +12,7 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.core.LocalVariableTableParameterNameDiscoverer;
+import org.springframework.core.DefaultParameterNameDiscoverer;
 import org.springframework.core.convert.support.DefaultConversionService;
 
 import java.lang.reflect.Method;
@@ -52,7 +52,7 @@ public class RestProcessor {
      * 扫描控制器注解类,并实例化,解析url和方法映射关系
      */
     public void prepare() {
-        LocalVariableTableParameterNameDiscoverer discoverer = new LocalVariableTableParameterNameDiscoverer();
+        DefaultParameterNameDiscoverer discoverer = new DefaultParameterNameDiscoverer();
 
         Map<String, Object> restBeanMap = scanner.getBeansWithAnnotation(Rest.class);
         Collection<Object> restBeans = restBeanMap.values();

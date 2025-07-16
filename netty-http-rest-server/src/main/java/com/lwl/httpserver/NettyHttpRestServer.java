@@ -1,8 +1,8 @@
 package com.lwl.httpserver;
 
 import com.lwl.httpserver.init.HttpRestPipelineInit;
-import com.lwl.httpserver.mvc.extension.HttpMessageConverter;
 import com.lwl.httpserver.mvc.MessageConverterRegistry;
+import com.lwl.httpserver.mvc.extension.HttpMessageConverter;
 import com.lwl.httpserver.mvc.extension.RestAnnotationScanner;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
@@ -38,7 +38,7 @@ import java.util.concurrent.TimeUnit;
  *  内核维护两个队列:未连接队列和已连接队列,三次握手完成后,将会从未完成队列移动到已完成
  *  队列的尾部,当进程调用accept时,从已完成队列的头部取出一个给进程.
  *  ChannelOption.SO_BACKLOG,被规定为两个队列总和的最大值,大多数实现
- *  默认值为5,在高并发的情况下明显不够,netty,默认设置为windows200,其他为128
+ *  默认值为5,在高并发的情况下明显不够,netty,默认设置为windows 200,其他为128
  * </pre>
  *
  * @author bruce - 2018/4/30 19:17
@@ -68,11 +68,10 @@ public class NettyHttpRestServer {
 
         //handlerGroup.setIoRatio(60); //调整I/O执行时间比例
 
-        //netty对Selector的selectedKeys进行了优化,默认没有打开
-		/*System.setProperty("io.netty.noKeySetOptimization", "true");
-		boolean disable_keyset_optimization =
-				SystemPropertyUtil.getBoolean("io.netty.noKeySetOptimization", false);
-		System.out.println(disable_keyset_optimization);*/
+        // netty对Selector的selectedKeys进行了优化,默认没有打开
+		// System.setProperty("io.netty.noKeySetOptimization", "true");
+		// boolean disable_keyset_optimization = SystemPropertyUtil.getBoolean("io.netty.noKeySetOptimization", false);
+		// System.out.println(disable_keyset_optimization);
 
         ServerBootstrap bootstrap = new ServerBootstrap();
 
