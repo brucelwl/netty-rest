@@ -19,7 +19,7 @@ public class HttpServerConfig {
     private boolean compressionEnabled = true;
 
     /** 默认超过2kb开始压缩 */
-    private int compressionThreshold = 2 * 1024;
+    private int compressionThreshold = 8 * 1024;
 
     private boolean sslClientMode = false;
 

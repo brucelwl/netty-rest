@@ -7,6 +7,7 @@ import com.lwl.httpserver.mvc.annotation.ReqMapping;
 import com.lwl.httpserver.mvc.annotation.ReqParam;
 import com.lwl.httpserver.mvc.annotation.Rest;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -16,19 +17,21 @@ import java.util.List;
 public class IndexRest {
 
     @ReqMapping(value = {"say", "hehe"})
-    public UserInfo sayHello(@ReqParam(value = "name1", required = true) List<String> name,
+    public UserInfo sayHello(@ReqParam(value = "name1", required = false) List<String> name,
                              String address, Integer age) {
         UserInfo userInfo = new UserInfo();
         userInfo.setNickname(JSON.toJSONString(name));
         userInfo.setId(1001);
-        userInfo.setLoginname("啊哈哈哈");
+        userInfo.setLoginname("啊哈哈哈" + LocalDateTime.now());
         userInfo.setPwd("wdwsfddsf23546+5");
 
-        //测试返回数据gzip压缩
+        // 测试返回数据gzip压缩
         StringBuilder stringBuilder = new StringBuilder();
-        for (int i = 0; i < 357; i++) {
-            stringBuilder.append("" + i);
+        stringBuilder.append("开始:");
+        for (int i = 0; i < 2000; i++) {
+            stringBuilder.append("哈哈").append(i);
         }
+        stringBuilder.append("结束了");
         userInfo.setPwd(stringBuilder.toString());
 
         return userInfo;

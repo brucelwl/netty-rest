@@ -4,6 +4,7 @@ import com.lwl.httpserver.mvc.annotation.ReqParam;
 import io.netty.handler.codec.http.HttpMethod;
 
 import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
 import java.util.Arrays;
 
@@ -29,7 +30,7 @@ public class UrlMappingMethodInfo {
     private ReqMethod[] supportMethod; //该方法支持的http请求方式
 
     private String[] parameterNames; //方法参数名
-    private Type[] genericParamTypes; //方法参数类型
+    private Parameter[] parameters; //方法参数类型
     private ReqParam[] reqParamAnnotations; //方法参数对应的注解
 
     public boolean isSupportMethod(HttpMethod reqMethod) {
@@ -61,12 +62,12 @@ public class UrlMappingMethodInfo {
         this.parameterNames = parameterNames;
     }
 
-    public Type[] getGenericParamTypes() {
-        return genericParamTypes;
+    public Parameter[] getParameters() {
+        return parameters;
     }
 
-    public void setGenericParamTypes(Type[] genericParamTypes) {
-        this.genericParamTypes = genericParamTypes;
+    public void setParameters(Parameter[] parameters) {
+        this.parameters = parameters;
     }
 
     public ReqParam[] getReqParamAnnotations() {
@@ -84,7 +85,7 @@ public class UrlMappingMethodInfo {
                 ", objMethod=" + objMethod +
                 ", supportMethod=" + Arrays.toString(supportMethod) +
                 ", parameterNames=" + Arrays.toString(parameterNames) +
-                ", genericParamTypes=" + Arrays.toString(genericParamTypes) +
+                ", parameters=" + Arrays.toString(parameters) +
                 ", reqParamAnnotations=" + Arrays.toString(reqParamAnnotations) +
                 '}';
     }

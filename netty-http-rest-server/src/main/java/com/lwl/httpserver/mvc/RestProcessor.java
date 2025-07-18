@@ -5,20 +5,21 @@ import com.lwl.httpserver.mvc.annotation.ReqMapping;
 import com.lwl.httpserver.mvc.annotation.ReqParam;
 import com.lwl.httpserver.mvc.annotation.Rest;
 import com.lwl.httpserver.mvc.extension.RestAnnotationScanner;
-import com.lwl.httpserver.util.ClassTypeUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.DefaultParameterNameDiscoverer;
+import org.springframework.core.MethodParameter;
+import org.springframework.core.convert.TypeDescriptor;
 import org.springframework.core.convert.support.DefaultConversionService;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Parameter;
-import java.lang.reflect.Type;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -58,14 +59,14 @@ public class RestProcessor {
         Collection<Object> restBeans = restBeanMap.values();
 
         for (Object restBean : restBeans) {
-            //Class<?> restBeanClass = AopUtils.getTargetClass(restBean);
+            // Class<?> restBeanClass = AopUtils.getTargetClass(restBean);
             Class<?> restBeanClass = restBean.getClass();
             Method[] declaredMethods = restBeanClass.getDeclaredMethods();
             if (!(declaredMethods.length > 0)) {
                 continue;
             }
             Rest restAnnotation = restBeanClass.getAnnotation(Rest.class);
-            //防止映射的url没写分割符,拼接出错误的url
+            // 防止映射的url没写分割符,拼接出错误的url
             String parentPath = "/".concat(restAnnotation.value()).concat("/");
             for (Method method : declaredMethods) {
                 ReqMapping mapping = null;
@@ -75,11 +76,14 @@ public class RestProcessor {
                 UrlMappingMethodInfo methodInfo = new UrlMappingMethodInfo(restBean, method);
                 methodInfo.setSupportMethod(mapping.method());
                 methodInfo.setParameterNames(discoverer.getParameterNames(method));
-                methodInfo.setGenericParamTypes(method.getGenericParameterTypes());
-                methodInfo.setReqParamAnnotations(getReqParamAnnotation(method.getParameters()));
+
+                Parameter[] parameters = method.getParameters();
+                methodInfo.setParameters(parameters);
+                methodInfo.setReqParamAnnotations(getReqParamAnnotation(parameters));
+
                 String[] paths = mapping.value();
                 if (paths.length == 0) {
-                    //如果注解路径参数为空,就以方法名作为url路径
+                    // 如果注解路径参数为空,就以方法名作为url路径
                     String url = toReqUrl(parentPath.concat(method.getName()));
                     this.saveReqMapping(url, methodInfo);
                     continue;
@@ -96,39 +100,36 @@ public class RestProcessor {
 
     public void invoke(ChannelHandlerContext ctx, FullHttpRequest request,
                        Map<String, List<String>> reqParams, String reqBody) {
-        String queryUri = request.uri(); //获取客户端访问的Uri
-        //分割掉get请求携带的参数
+        String queryUri = request.uri(); // 获取客户端访问的Uri
+        // 分割掉get请求携带的参数
         String uri = queryUri;
         if (uri.contains("?")) {
             uri = uri.substring(0, uri.indexOf("?"));
         }
-        //通过url获取映射请求的方法,uri没有映射的方法返回404
+        // 通过url获取映射请求的方法,uri没有映射的方法返回404
         UrlMappingMethodInfo methodInfo = urlMethodInfoMap.get(uri);
         if (methodInfo == null) {
             logger.warn("response http 404, url from client is:{}", queryUri);
             HttpRestHandler.sendError(ctx, HttpResponseStatus.NOT_FOUND);
             return;
         }
-        HttpMethod httpMethod = request.method(); //获取客户端请求方法
+        HttpMethod httpMethod = request.method(); // 获取客户端请求方法
         boolean supportMethod = methodInfo.isSupportMethod(httpMethod);
-        if (!supportMethod) { //不支持的请求方法
+        if (!supportMethod) { // 不支持的请求方法
             HttpRestHandler.sendError(ctx, HttpResponseStatus.METHOD_NOT_ALLOWED);
             return;
         }
-        //获取方法参数名
-        String[] parameterNames = methodInfo.getParameterNames();
-        //获取参数类型
-        Type[] parameterTypes = methodInfo.getGenericParamTypes();
-        //获取参数对应的注解
-        ReqParam[] reqParamAnnotations = methodInfo.getReqParamAnnotations();
+        String contentType = request.headers().get(HttpHeaderNames.CONTENT_TYPE);
+        // 获取参数类型
+        Parameter[] parameters = methodInfo.getParameters();
         try {
-            MethodInvokeArgs result = parseMethodInvokeArgs(parameterNames, parameterTypes, reqParamAnnotations, reqParams, reqBody);
+            MethodInvokeArgs result = parseMethodInvokeArgs(methodInfo, contentType, reqParams, reqBody);
             if (result.getStatus() == HttpResponseStatus.BAD_REQUEST) {
                 HttpRestHandler.sendError(ctx, HttpResponseStatus.BAD_REQUEST);
                 return;
             }
             Object rtn;
-            if (parameterTypes.length > 0) {
+            if (parameters.length > 0) {
                 rtn = methodInfo.getObjMethod().invoke(methodInfo.getObj(), result.getMethodInvokeArgs());
             } else {
                 rtn = methodInfo.getObjMethod().invoke(methodInfo.getObj());
@@ -181,15 +182,17 @@ public class RestProcessor {
     /**
      * 将http请求参数转为控制器方法调用参数
      *
-     * @param parameterNames 控制器方法参数名
-     * @param parameterTypes 控制器方法参数类型
-     * @param httpParams     请求参数
+     * @param httpParams 请求参数
      * @return
      */
-    private MethodInvokeArgs parseMethodInvokeArgs(String[] parameterNames, Type[] parameterTypes,
-                                                   ReqParam[] reqParamAnnotations,
+    private MethodInvokeArgs parseMethodInvokeArgs(UrlMappingMethodInfo methodInfo,
+                                                   String contentType,
                                                    Map<String, List<String>> httpParams,
                                                    String reqBody) {
+        String[] parameterNames = methodInfo.getParameterNames();
+        ReqParam[] reqParamAnnotations = methodInfo.getReqParamAnnotations();
+        Parameter[] parameters = methodInfo.getParameters();
+
         MethodInvokeArgs result = new MethodInvokeArgs();
         result.setStatus(HttpResponseStatus.CONTINUE);
         Object[] args = null;
@@ -197,21 +200,21 @@ public class RestProcessor {
             args = new Object[parameterNames.length];
             for (int i = 0; i < parameterNames.length; i++) {
                 ReqParam paramAnno = reqParamAnnotations[i];
-                //优先使用注解定义的参数,默认使用方法定义参数
+                // 优先使用注解定义的参数,默认使用方法定义参数
                 String httpParamName = (paramAnno != null && !paramAnno.value().trim().equals(""))
                         ? paramAnno.value().trim() : parameterNames[i];
 
-                //获取http请求参数对应的值
-                //List<String> values = httpParams.get(httpParamName);
-                Object values = getValueAndConvenience(parameterTypes[i], httpParamName, httpParams, reqBody);
+                // 获取http请求参数对应的值
+                // List<String> values = httpParams.get(httpParamName);
+                Object values = getValueAndConvenience(parameters[i], httpParamName, contentType, httpParams, reqBody);
 
-                //如果该参数要求必填,且参数值为null,返回客户端错误的请求信息
+                // 如果该参数要求必填,且参数值为null,返回客户端错误的请求信息
                 if (values == null && paramAnno != null && paramAnno.required()) {
                     result.setStatus(HttpResponseStatus.BAD_REQUEST);
                     return result;
                 }
-                //注意这个时候得到的 http 请求值values可能为null或者size = 0,
-                //size=0表示客户端传递了参数名但没有值
+                // 注意这个时候得到的 http 请求值values可能为null或者size = 0,
+                // size=0表示客户端传递了参数名但没有值
                 args[i] = values;
             }
         }
@@ -221,40 +224,21 @@ public class RestProcessor {
 
 
     /**
-     * @param parameterType 参数类型
+     * @param parameter 参数类型
      */
-    private Object getValueAndConvenience(Type parameterType, String httpParamName,
+    private Object getValueAndConvenience(Parameter parameter, String httpParamName,
+                                          String contentType,
                                           Map<String, List<String>> httpParams,
                                           String reqBody) {
-        if (parameterType instanceof Class && ClassTypeUtil.isBasicType((Class<?>) parameterType)) {
-            //一个参数可能对应多个值
+        if (!"application/json".equals(contentType)) {
+            // 一个参数可能对应多个值
             List<String> values = httpParams.get(httpParamName);
             return values == null
                     ? null
-                    : DefaultConversionService.getSharedInstance().convert(values, (Class<?>) parameterType);
+                    : DefaultConversionService.getSharedInstance().convert(values, new TypeDescriptor(MethodParameter.forParameter(parameter)));
         }
-        //除了基础类型为, 仅支持application/json请求
-        return MessageConverterRegistry.parseObject(reqBody, parameterType);
-        //AbstractEnvironment environment = new AbstractEnvironment() {
-        //};
-        //MapPropertySource mapPropertySource = new MapPropertySource("http-req-params", new HashMap<>(httpParams));
-        //environment.getPropertySources().addLast(mapPropertySource);
-        //Binder binder = Binder.get(environment);
-        //
-        //if (parameterType instanceof ParameterizedType) {
-        //    ParameterizedType parameterizedType = (ParameterizedType) parameterType;
-        //    Type rawType = parameterizedType.getRawType();
-        //    if (List.class.isAssignableFrom((Class<?>) rawType)) {
-        //        Bindable<? extends List<?>> listBindable = Bindable.listOf((Class<?>) parameterizedType.getActualTypeArguments()[0]);
-        //        return binder.bind(httpParamName, listBindable).orElse(null);
-        //    }
-        //    if (Set.class.isAssignableFrom((Class<?>) rawType)) {
-        //        Bindable<? extends Set<?>> setBindable = Bindable.setOf((Class<?>) parameterizedType.getActualTypeArguments()[0]);
-        //        return binder.bind(httpParamName, setBindable).orElse(null);
-        //    }
-        //}
-        //ResolvableType resolvableType = ResolvableType.forType(parameterType);
-        //return binder.bind("", Bindable.of(resolvableType)).orElse(null);
+        // 除了基础类型为, 仅支持application/json请求
+        return MessageConverterRegistry.parseObject(reqBody, parameter.getType());
     }
 
     private ReqParam[] getReqParamAnnotation(Parameter[] parameters) {
