@@ -32,7 +32,6 @@ import io.netty.handler.stream.ChunkedStream;
 import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.util.CharsetUtil;
-import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -196,19 +195,20 @@ public class HttpRestHandler extends SimpleChannelInboundHandler<FullHttpRequest
         // 使用chunked传输
         // ChannelFuture future = respEncodingChunked(content, ctx, headers);
 
-        // 如果是非Keep-Alive，关闭连接
-        if (!keepAlive) {
-            future.addListener(ChannelFutureListener.CLOSE);
-        }
-
-        future.addListener(new GenericFutureListener<Future<? super Void>>() {
+        future.addListener(new GenericFutureListener<ChannelFuture>() {
             @Override
-            public void operationComplete(Future<? super Void> future) throws Exception {
+            public void operationComplete(ChannelFuture future) throws Exception {
+                // 如果是非Keep-Alive，关闭连接
+                if (!keepAlive) {
+                    ChannelFutureListener.CLOSE.operationComplete(future);
+                }
                 if (!future.isSuccess()) {
                     Throwable cause = future.cause();
                     logger.error("response error:", cause);
                 } else {
-                    logger.debug("response success!");
+                    if (logger.isDebugEnabled()) {
+                        logger.debug("response success!");
+                    }
                 }
             }
         });
