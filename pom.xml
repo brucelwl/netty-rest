@@ -14,7 +14,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.5.3</version>
+        <version>4.0.0</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
 
@@ -33,12 +33,6 @@
     <dependencyManagement>
 
         <dependencies>
-
-            <dependency>
-                <groupId>io.netty</groupId>
-                <artifactId>netty-all</artifactId>
-                <version>4.1.43.Final</version>
-            </dependency>
 
             <dependency>
                 <groupId>com.alibaba.fastjson2</groupId>

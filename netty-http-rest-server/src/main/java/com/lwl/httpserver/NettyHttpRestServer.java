@@ -9,7 +9,8 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
+import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
@@ -19,8 +20,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.helpers.NOPLogger;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -46,9 +45,11 @@ import java.util.concurrent.TimeUnit;
 public class NettyHttpRestServer {
     private static final Logger logger = LoggerFactory.getLogger(NettyHttpRestServer.class);
 
-    private static final List<NioEventLoopGroup> nioEventLoopGroups = new ArrayList<>(2);
     private final HttpServerConfig config;
     private final ChannelInitializer<Channel> channelInitializer;
+
+    MultiThreadIoEventLoopGroup acceptGroup;
+    MultiThreadIoEventLoopGroup handlerGroup;
 
     public NettyHttpRestServer(RestAnnotationScanner restAnnotationScanner, HttpServerConfig config) {
         this.channelInitializer = new HttpRestPipelineInit(restAnnotationScanner, config);
@@ -61,28 +62,31 @@ public class NettyHttpRestServer {
 
     public void startServer() {
         String nioThreadPrefix = config.getNioThreadPrefix() != null ? config.getNioThreadPrefix() : "http-reset";
-        NioEventLoopGroup acceptGroup = new NioEventLoopGroup(1, new DefaultThreadFactory(nioThreadPrefix + "nioAccept"));
-        NioEventLoopGroup handlerGroup = new NioEventLoopGroup(0, new DefaultThreadFactory(nioThreadPrefix + "nioHandler"));
-        nioEventLoopGroups.add(acceptGroup);
-        nioEventLoopGroups.add(handlerGroup);
 
-        //handlerGroup.setIoRatio(60); //调整I/O执行时间比例
+        acceptGroup = new MultiThreadIoEventLoopGroup(
+                1,
+                new DefaultThreadFactory(nioThreadPrefix + "nioAccept"), NioIoHandler.newFactory());
+
+        handlerGroup = new MultiThreadIoEventLoopGroup(
+                new DefaultThreadFactory(nioThreadPrefix + "nioHandler"), NioIoHandler.newFactory());
+
+        // handlerGroup.setIoRatio(60); //调整I/O执行时间比例
 
         // netty对Selector的selectedKeys进行了优化,默认没有打开
-		// System.setProperty("io.netty.noKeySetOptimization", "true");
-		// boolean disable_keyset_optimization = SystemPropertyUtil.getBoolean("io.netty.noKeySetOptimization", false);
-		// System.out.println(disable_keyset_optimization);
+        // System.setProperty("io.netty.noKeySetOptimization", "true");
+        // boolean disable_keyset_optimization = SystemPropertyUtil.getBoolean("io.netty.noKeySetOptimization", false);
+        // System.out.println(disable_keyset_optimization);
 
         ServerBootstrap bootstrap = new ServerBootstrap();
 
         bootstrap.group(acceptGroup, handlerGroup)
                 .channel(NioServerSocketChannel.class)
-                .option(ChannelOption.SO_BACKLOG, 200) //指定了内核为此套接口排队的最大连接数
-                .option(ChannelOption.SO_RCVBUF, 256)  //接收缓冲区
+                .option(ChannelOption.SO_BACKLOG, 200) // 指定了内核为此套接口排队的最大连接数
+                .option(ChannelOption.SO_RCVBUF, 256)  // 接收缓冲区
                 //.option(ChannelOption.SO_SNDBUF,1024)
-                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 30_000) //设置连接超时时间
+                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 30_000) // 设置连接超时时间
                 //.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT) //使用对象池重用缓冲区
-                .childOption(ChannelOption.SO_SNDBUF, 1024) //发送缓冲区
+                .childOption(ChannelOption.SO_SNDBUF, 1024) // 发送缓冲区
                 .localAddress(config.getPort())
                 .handler(new LoggingHandler(LogLevel.INFO))
                 .childHandler(channelInitializer);
@@ -95,7 +99,7 @@ public class NettyHttpRestServer {
             logPrint("HttpRestServer start failed:" + ex.getMessage());
         }
 
-        //future.addListener((ChannelFutureListener) future1 -> {
+        // future.addListener((ChannelFutureListener) future1 -> {
         //    if (future1.isSuccess()) {
         //        logPrint("HttpRestServer start success on port: " + port);
         //    } else {
@@ -107,19 +111,23 @@ public class NettyHttpRestServer {
 
     public void stopServer() {
         logPrint("HttpRestServer stopping...");
-        List<Future<?>> futures = new ArrayList<>(nioEventLoopGroups.size());
-        for (NioEventLoopGroup nioEventLoopGroup : nioEventLoopGroups) {
-            Future<?> future = nioEventLoopGroup.shutdownGracefully();
-            future.addListener((f) -> logPrint("HttpRestServer stopped : " + future.isSuccess()));
-            futures.add(future);
+
+        Future<?> acceptStopFuture = acceptGroup.shutdownGracefully();
+        acceptStopFuture.addListener((f) -> logPrint("HttpRestServer stopped : " + acceptStopFuture.isSuccess()));
+
+        Future<?> handlerStopFuture = handlerGroup.shutdownGracefully();
+        handlerStopFuture.addListener((f) -> logPrint("HttpRestServer stopped : " + handlerStopFuture.isSuccess()));
+
+        try {
+            acceptStopFuture.sync();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
-        futures.forEach(future -> {
-            try {
-                future.sync();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        });
+        try {
+            handlerStopFuture.sync();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
 
     }
 
